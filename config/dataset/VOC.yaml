@@ -1,0 +1,24 @@
+continue_learning:
+  name:
+    "VOC"
+  located:
+    "data/PascalVOC12"
+  class_number:
+    20
+  classes_name:
+    "classes/VOC_classes.txt"
+  training:
+    task_1:
+      training_type:
+        "disjoint"
+      design:
+        "15-5"
+      index_order:
+        "*-1,2,3,4,5"
+    task_2:
+      learning_type:
+        "overlapped"
+      design:
+        "19-1"
+      index_order:
+        "*-12"

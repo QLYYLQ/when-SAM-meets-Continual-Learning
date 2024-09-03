@@ -1,0 +1,22 @@
+continue_learning:
+  named:
+    "template which shows how to write a dataset yaml"
+  located:
+    "path/to/dataset"
+  class_number:
+    "a number about the class number in dataset"
+  classes_name:
+    "a file stored the index and class name for dataset"
+  training:
+    #you and add your task as task_3 and so on
+    task_1:
+      training_type:
+        "disjoint or overlapped"
+      design:
+        " writing as: number a-number b that shows your task design"
+      index_order:
+        "
+        a string about the index order you design to learn like: *-12-1. the example shows that the task has three stages
+        that only learn one more class in stage 2 and 3 and the index is 12 and 1.
+        "
+

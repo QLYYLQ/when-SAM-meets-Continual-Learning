@@ -1,0 +1,31 @@
+continue_learning:
+  named:
+    "ade"
+  located:
+    "暂时不明"
+  class_number:
+    150
+  classes_name:
+    "classes/ade_classes.txt"
+  training:
+    task_1:
+      training_type:
+        "none"
+      design:
+        "none"
+      index_order:
+        "none"
+    task_2:
+      training_type:
+        "none"
+      design:
+        "none"
+      index_order:
+        "none"
+  dataset:
+    Segmentation:
+      "setting for Segmentation dataset"
+    Increment:
+      "setting for Incremental dataset"
+    evaluation:
+      "setting for evaluation dataset"
