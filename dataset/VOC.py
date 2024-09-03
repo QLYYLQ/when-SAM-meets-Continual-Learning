@@ -5,6 +5,7 @@ import copy
 import os
 import numpy as np
 import torch.utils.data as data
+import torch
 import torchvision as tv
 from PIL import Image
 from torch import distributed
@@ -158,12 +159,55 @@ class Increment(data.Dataset):
                 l in labels_old for l in labels
             ), "labels and labels_old must be disjoint sets"
 
-            self.labels = [0] + labels
-            self.labels_old = [0] + labels_old
+            # 下面这一坨注释是：确保了在学习新任务时，模型能够保留足够的旧任务示例，从而在持续学习过程中保持对旧任务的记忆。它通过平衡每个类别的
+            # 示例数量来防止灾难性遗忘，同时也考虑了数据集之间可能存在的重叠，如果用sam的话我们应该不需要这个流程
 
-            if self.order != self.labels_old+self.labels:
-                raise ValueError("The labels passed in contradict each other. Check whether label_old+labels equals order")
-            # take index of images with at least one class in labels and all classes in labels+labels_old+[0,255]
+
+            # if ssul_exemplar_path is not None:
+            #     print(ssul_exemplar_path)
+            #     if os.path.exists(ssul_exemplar_path):
+            #         ssul_exemplar_idx_cls = torch.load(ssul_exemplar_path)
+            #         for k in ssul_exemplar_idx_cls:
+            #             if opts.method != 'SATS':
+            #                 idxs += ssul_exemplar_idx_cls[k][:7]
+            #             else:
+            #                 idxs += ssul_exemplar_idx_cls[k]
+            #         print('length of ssul-m balanced exemplar samples:', len(idxs))
+            #     if len(idxs) == 0 or not os.path.exists(ssul_exemplar_path) and False:
+            #         print(f'current task:{labels} ssul building exemplar set!')
+            #         per_task_exemplar = opts.ssul_m_exemplar_total / len(labels_old)
+            #         print(f'every class {per_task_exemplar} samples')
+            #         assert idxs_path is not None
+            #         idxs_old = np.load(idxs_path).tolist()
+            #
+            #         old_exemplar = (f'./balance_step_exemplar/{opts.dataset}_{opts.task}_step_{opts.step - 1}_exemplar'
+            #                         f'.pth')
+            #         ssul_exemplar_idx_cls = torch.load(old_exemplar)
+            #         lens = {}
+            #         for label in labels_old:
+            #             ssul_exemplar_idx_cls[label - 1] = []
+            #             lens[label - 1] = 0
+            #         for idx in tqdm(idxs_old):
+            #             img_cls = np.unique(np.array(full_voc[idx][1]))
+            #             fg = 1
+            #             print(lens)
+            #             for label in img_cls:  #QUESTION??? NOT EVERY CLASS TO BE 20 SAMPLES
+            #                 if label in ssul_exemplar_idx_cls.keys() and lens[label] < per_task_exemplar:
+            #                     ssul_exemplar_idx_cls[label].append(idx)
+            #                     idxs.append(idx)
+            #                     lens[label] += 1
+            #             for label in labels_old:
+            #                 if lens[label - 1] < per_task_exemplar:
+            #                     fg = 0
+            #             if fg == 1:
+            #                 break
+            #
+            #         torch.save(ssul_exemplar_idx_cls, ssul_exemplar_path)
+
+
+            # take index of images with at least one class in labels and all classes in labels+labels_old+[0]
+
+
             if idxs_path is not None and os.path.exists(idxs_path):
                 idx = np.load(idxs_path).tolist()
             else:
