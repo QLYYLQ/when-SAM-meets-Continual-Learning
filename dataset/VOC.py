@@ -8,7 +8,7 @@ import torch.utils.data as data
 import torchvision as tv
 from PIL import Image
 from torch import distributed
-from .utils import Subset, filter_images
+from .utils.filter_images import filter_images
 from .register import register_training_dataset,register_evaluating_dataset
 
 # classes = {
@@ -47,7 +47,7 @@ class Segmentation(data.Dataset):
             and returns a transformed version. E.g, ``transforms.RandomCrop``
     """
 
-    def __init__(self, root, is_aug=True, in_memory=True,transform=None):
+    def __init__(self, root, is_aug=True,transform=None):
         """
         删除：image_set='train'
         因为测试使用别的数据集（调控是否只返回特定的图片）
@@ -59,7 +59,6 @@ class Segmentation(data.Dataset):
         """
         self.root = os.path.expanduser(root)
         self._check_dataset_exists()
-        self.in_memory = in_memory
         self.transform = transform
         # self.image_set = image_set
         splits_dir = os.path.join(self.root, 'splits')
@@ -105,14 +104,11 @@ class Segmentation(data.Dataset):
         Returns:
             tuple: (image, target) where target is the image segmentation.
         """
-        if self.in_memory:
-            target = Image.open(self.images[index][1])
-            img = Image.open(self.images[index][0]).convert('RGB')
-            if self.transform is not None:
-                img, target = self.transform(img, target)
-            return img, target
-        else:
-            return self.images[index][0],self.images[index][1]
+        target = Image.open(self.images[index][1])
+        img = Image.open(self.images[index][0]).convert('RGB')
+        if self.transform is not None:
+            img, target = self.transform(img, target)
+        return {"data":[img, target],"path":[self.images[index][0],self.images[index][1]]}
 
     def viz_getter(self, index):
         image_path = self.images[index][0]
@@ -143,7 +139,6 @@ class Increment(data.Dataset):
             masking=True,
             overlap=True,
             data_masking="current",
-            test_on_val=False,
             **kwargs
     ):
 
@@ -170,20 +165,13 @@ class Increment(data.Dataset):
                 raise ValueError("The labels passed in contradict each other. Check whether label_old+labels equals order")
             # take index of images with at least one class in labels and all classes in labels+labels_old+[0,255]
             if idxs_path is not None and os.path.exists(idxs_path):
-                idxs = np.load(idxs_path).tolist()
+                idx = np.load(idxs_path).tolist()
             else:
-                idxs = filter_images(full_voc, labels, labels_old, overlap=overlap)
+                idx = filter_images(full_voc, labels, labels_old, overlap=overlap)
                 if idxs_path is not None and distributed.get_rank() == 0:
-                    np.save(idxs_path, np.array(idxs, dtype=int))
+                    np.save(idxs_path, np.array(idx, dtype=int))
 
-            if test_on_val:
-                rnd = np.random.RandomState(1)
-                rnd.shuffle(idxs)
-                train_len = int(0.8 * len(idxs))
-                if train:
-                    idxs = idxs[:train_len]
-                else:
-                    idxs = idxs[train_len:]
+
 
             #if train:
             #    masking_value = 0
