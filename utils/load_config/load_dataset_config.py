@@ -91,7 +91,8 @@ def _check_config(config, template_config):
             raise AttributeError(f"please check the config, evaluate and training should have same task {task}")
 
 def _modify_increment_setting(config):
-    pass
+
+    return config
 
 
 def _random_select_and_remove(number_list, n):
