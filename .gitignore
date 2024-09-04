@@ -9,7 +9,7 @@
 
 # 忽略 test 文件夹
 /test/
-
+/data/
 # 忽略特定的编程语言和框架的缓存文件
 # Python
 __pycache__/

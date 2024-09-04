@@ -15,10 +15,11 @@ evaluate:
       ["only stage","all"]
 dataset_setting:
   root:
-    "path/to/dataset"
+    "PascalVOC12"
   class_number:
     "20"
-  classes_name:
+  classes:
     "default"
   need_index_name:
     True
+Increment_setting:

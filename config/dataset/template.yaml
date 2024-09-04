@@ -22,8 +22,18 @@ dataset_setting:
     "path/to/dataset"
   class_number:
     "a number about the class number in dataset"
-  classes_name:
+  classes:
     "a file stored the index and class name for dataset. default is in classes/dataset_name_classes.pkl"
   need_index_name:
     True
+Increment_setting:
+  root:
+    "path"
+  idxs_path:
+    "path"
+  save_path:
+    None
+  data_masking:
+    True
+
 

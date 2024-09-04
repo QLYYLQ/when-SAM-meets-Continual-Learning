@@ -1,12 +1,13 @@
 import os.path as osp
 import random
 from pathlib import Path
-from base_load import get_config
+from .base_load import get_config
 from munch import Munch
 import pickle
 from copy import deepcopy
 
 dataset_config_root_path = Path(__file__).resolve().parent.parent.parent.joinpath('config', 'dataset')
+dataset_root_path = Path(__file__).resolve().parent.parent.parent.joinpath("data")
 
 
 def get_dataset_config(dataset_name):
@@ -27,8 +28,7 @@ def _load_template_config():
 
 
 def _modify_dataset_config(config):
-    """change default setting in config
-    classes_name暂时还没实现default的转化，也就是改个路径的事"""
+    """change default setting in config"""
     config = _modify_training(config)
     config = _modify_dataset_setting(config)
     return config
@@ -48,18 +48,25 @@ def _modify_training(config):
             label_list = [x for x in range(classes_number)]
             for key, number in stage_number.items():
                 index_order[key], label_list = _random_select_and_remove(label_list, number)
-            copied_config.training.index_order = Munch.fromDict(index_order)
+            copied_config.training[task].index_order = Munch.fromDict(index_order)
     return copied_config
 
+
 def _modify_dataset_setting(config):
-    path = dataset_config_root_path.joinpath(config.dataset_setting.classes_name)
-    if config.dataset_setting.classes_name == 'default':
-        path = dataset_config_root_path.joinpath('classes',f"{config.name}_classes.pkl")
-    if not osp.exists(path):
+    classes_path = dataset_config_root_path.joinpath(config.dataset_setting.classes)
+    # 修改default的classes name路径
+    if config.dataset_setting.classes == 'default':
+        classes_path = dataset_config_root_path.joinpath('classes', f"{config.name}_classes.pkl")
+    if not osp.exists(classes_path):
         raise FileNotFoundError("please check the file, classes_name is missing")
-    with open(path, 'rb') as f:
+    with open(classes_path, 'rb') as f:
         classes = pickle.load(f)
-    config.dataset_setting.classes_name = classes
+    config.dataset_setting.classes = classes
+    dataset_root = dataset_root_path.joinpath(config.dataset_setting.root)
+    if not osp.exists(dataset_root):
+        raise FileNotFoundError(f"please check the file, dataset root is missing. the path is {dataset_root}")
+    config.dataset_setting.root = str(dataset_root)
+
     return config
 
 
@@ -93,4 +100,4 @@ def _random_select_and_remove(number_list, n):
 if __name__ == '__main__':
     config = get_dataset_config('VOC')
     print(config)
-    config = get_dataset_config("ade")
+    # config = get_dataset_config("ade")

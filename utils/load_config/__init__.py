@@ -1,1 +1,1 @@
-from load_dataset_config import get_dataset_config
+from .load_dataset_config import get_dataset_config

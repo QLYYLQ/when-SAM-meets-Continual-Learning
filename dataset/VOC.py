@@ -1,146 +1,37 @@
-# 每次迭代需要返回一个字典：图片，遮罩，任务编号，label的编号，text prompt的内容
-
-
-import copy
 import os
 import numpy as np
 import torch.utils.data as data
-import torch
 import torchvision as tv
-from PIL import Image
-from torch import distributed
 from .utils.filter_images import filter_images, save_list_from_filter, load_list_from_path
-from .register import register_training_dataset, register_evaluating_dataset
+from .register import register_training_dataset, register_validation_dataset
+from .base_dataset import BaseSegmentation
+from typing_extensions import override
 
-
-# classes = {
-#     0: 'background',
-#     1: 'aeroplane',
-#     2: 'bicycle',
-#     3: 'bird',
-#     4: 'boat',
-#     5: 'bottle',
-#     6: 'bus',
-#     7: 'car',
-#     8: 'cat',
-#     9: 'chair',
-#     10: 'cow',
-#     11: 'dining table',
-#     12: 'dog',
-#     13: 'horse',
-#     14: 'motorbike',
-#     15: 'person',
-#     16: 'potted plant',
-#     17: 'sheep',
-#     18: 'sofa',
-#     19: 'train',
-#     20: 'tv monitor'
-# }
 
 
 @register_training_dataset
-class Segmentation(data.Dataset):
-    """
-    remove:
-        image_set (string, optional): Select the image_set to use, ``train``, ``trainval`` or ``val``
-    Args:
-        root (string): Root directory of the VOC Dataset.
-        is_aug (bool, optional): If you want to use the augmented train set or not (default is True)
-        transform (callable, optional): A function/transform that  takes in an PIL image
-            and returns a transformed version. E.g, ``transforms.RandomCrop``
-    """
+class Segmentation(BaseSegmentation):
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        self.type = "test"
 
-    def __init__(self, root, is_aug=True, transform=None, target_transform=None,need_index_name=False,classes=None):
-        """
-        删除：image_set='train'
-        因为测试使用别的数据集（调控是否只返回特定的图片）
-        Parameters
-        ----------
-        root
-        is_aug
-        transform
-        target_transform
-        index_name_dict
-        classes
-        """
-        self.root = os.path.expanduser(root)
-        self._check_dataset_exists(self.root)
-        self.transform = transform
-        self.target_transform = target_transform
-        self.need_index_name= need_index_name
-        self.classes = classes
-        # self.image_set = image_set
-        splits_dir = os.path.join(self.root, 'splits')
-        if is_aug:  # and image_set == 'train':
-            mask_dir = os.path.join(self.root, 'SegmentationClassAug')
-            assert os.path.exists(mask_dir), "SegmentationClassAug not found"
-            split_f = os.path.join(splits_dir, 'train_aug.txt')
-        else:
-            split_f = os.path.join(splits_dir, "train" + '.txt')
+    @override
+    def _get_path(self):
+        return os.path.join(self.root, "splits","train.txt")
 
-        if not os.path.exists(split_f):
-            raise ValueError(
-                'Wrong image_set entered! Please use image_set="train" '
-                'or image_set="trainval" or image_set="val" '
-                f'{split_f}'
-            )
-
-        self.images = self.load_data_path_to_list(split_f)
-
-    def _check_dataset_exists(self, path):
-        # 检测是否存在数据集
-        if not os.path.isdir(path):
-            raise RuntimeError(
-                'Dataset not found or corrupted.'
-            )
-
-    def load_data_path_to_list(self, path):
+    @override
+    def _load_data_path_to_list(self, path):
         images = []
-        with open(path, "r") as f:
+        with open(path, 'r') as f:
             for line in f:
-                x = line[:-1].split(' ')
-                images.append((
-                    os.path.join(self.root, x[0][1:]),
-                    os.path.join(self.root, x[1][1:])
-                ))
-
+                x = line.strip().split(" ")
+                images.append((os.path.join(self.root, x[0][1:]), os.path.join(self.root, x[1][1:])))
         return images
 
-    def __getitem__(self, index):
-        """
-        Args:
-            index (int): Index
-        Returns:
-            tuple: (image, target) where target is the image segmentation.
-        """
-        target = Image.open(self.images[index][1])
-        img = Image.open(self.images[index][0]).convert('RGB')
-        if self.transform is not None:
-            img, target = self.transform(img, target)
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-        if self.need_index_name:
-            text_pompt = self.get_text_prompt_from_target(target)
-            return{"data": [img, target], "path": [self.images[index][0], self.images[index][1]],"text_prompt":text_pompt}
-        return {"data": [img, target], "path": [self.images[index][0], self.images[index][1]]}
-
-    def apply_new_data_list(self, new_data_list_path):
-        """真个函数是用作训练中不同的task构建不同内容的Segmentation子集时使用"""
-        self._check_dataset_exists(new_data_list_path)
-        self.images = []
-        # 这个数据集用空格做分割，但是考虑到很多时候路径带空格，这套方法会有问题
-        # self.images = self.load_data_path_to_list(new_data_list_path)
-        with open(new_data_list_path, "r") as f:
-            for line in f:
-                x = line[:-1].split(',')
-                self.images.append((x[0], x[1]))
-
-    def __len__(self):
-        return len(self.images)
-
-    def get_text_prompt_from_target(self,target):
+    @override
+    def _get_text_prompt_from_target(self, target):
         unique_values = np.unique(np.array(target).flatten())
-        target_text = [self.classes[val] for val in unique_values if val not in [0,255]]
+        target_text = [self.classes[x] for x in unique_values if x not in [0,255]]
         text_prompt = ".".join(target_text)
         return text_prompt
 
@@ -160,10 +51,11 @@ class Increment(data.Dataset):
             overlap=True,
             data_masking="current",
             no_memory = True,
+            need_index_name=False,
             **kwargs
     ):
 
-        full_voc = Segmentation(root, is_aug=True, transform=None)
+        full_voc = Segmentation(root, is_aug=True, transform=None,need_index_name=need_index_name)
         self.order = order
         self.labels = []
         self.labels_old = []
@@ -286,13 +178,14 @@ class Increment(data.Dataset):
         while 0 in labels:
             labels.remove(0)
 
-@register_evaluating_dataset
+@register_validation_dataset
 class Validation(data.Dataset):
     def __init__(
             self,
             root,
-            train=True,
+            classes = None,
             transform=None,
+            target_transform=None,
             order=None,
             labels=None,
             labels_old=None,
@@ -305,6 +198,11 @@ class Validation(data.Dataset):
     ):
         """感觉测试数据中的实现不需要考虑是否overlap，后续包装中可以通过传入的labels调整dataset为disjoint或者overlap"""
         self.root = root
+        self.dataset = Segmentation(root,need_index_name=True,transform=transform,classes=classes,target_transform=target_transform)
         self.order = order
+        # 感觉这两个参数目前用不到
         self.labels = labels
+        self.labels_old = labels_old
+        #
+        self.save_path = save_path
 

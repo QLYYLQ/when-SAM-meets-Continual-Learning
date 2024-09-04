@@ -15,7 +15,7 @@ def register_training_dataset(fn: Dataset):
     return fn
 
 
-def register_evaluating_dataset(fn: Dataset):
+def register_validation_dataset(fn: Dataset):
     """
     注册数据集，被这个函数修饰过的函数都会把所在的文件名当作数据集名存在_dataset_name中
     不用__name__的原因是dataset的类名多半不直观，不如用文件名来得简单
