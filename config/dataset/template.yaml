@@ -29,15 +29,20 @@ dataset_setting:
   ignore_index:
     [0]#a list about the index to ignore
 Increment_setting:
-  root:
-    "path"
   segmentation_dataset_name:
     "default is name.Segmentation"
+  overlap:
+    True
+  masking:
+    True
+  data_masking:
+    "current or current+old or all"
+  no_memory:
+    True
   new_image_path:
     "path"
   save_stage_image_list_path:
     None
-  data_masking:
-    True
+
 
 
