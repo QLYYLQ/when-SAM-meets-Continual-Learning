@@ -150,7 +150,6 @@ class Increment(data.Dataset):
     def __init__(
             self,
             root,
-            train=True,
             transform=None,
             order=None,
             labels=None,
@@ -160,6 +159,7 @@ class Increment(data.Dataset):
             masking=True,
             overlap=True,
             data_masking="current",
+            no_memory = True,
             **kwargs
     ):
 
@@ -167,7 +167,7 @@ class Increment(data.Dataset):
         self.order = order
         self.labels = []
         self.labels_old = []
-
+        self.no_memory = no_memory
         if labels is not None:
             # store the labels
             labels_old = labels_old if labels_old is not None else []
@@ -178,7 +178,11 @@ class Increment(data.Dataset):
             assert not any(
                 l in labels_old for l in labels
             ), "labels and labels_old must be disjoint sets"
-
+            if not self.no_memory:
+                # 实现记忆工作
+                # 创建一个列表，记录了需要使用的过往训练过的图片和target的地址，通过一些策略把这些地址插入到self.dataset.images这个列表中
+                # 即可，或是在getitem方法中实现选择读入
+                pass
             # 下面这一坨注释是：确保了在学习新任务时，模型能够保留足够的旧任务示例，从而在持续学习过程中保持对旧任务的记忆。它通过平衡每个类别的
             # 示例数量来防止灾难性遗忘，同时也考虑了数据集之间可能存在的重叠，如果用sam的话我们应该不需要这个流程
 
@@ -281,3 +285,26 @@ class Increment(data.Dataset):
     def __strip_zero(labels):
         while 0 in labels:
             labels.remove(0)
+
+@register_evaluating_dataset
+class Validation(data.Dataset):
+    def __init__(
+            self,
+            root,
+            train=True,
+            transform=None,
+            order=None,
+            labels=None,
+            labels_old=None,
+            idxs_path=None,
+            save_path=None,
+            masking=True,
+            overlap=True,
+            data_masking="current",
+            **kwargs
+    ):
+        """感觉测试数据中的实现不需要考虑是否overlap，后续包装中可以通过传入的labels调整dataset为disjoint或者overlap"""
+        self.root = root
+        self.order = order
+        self.labels = labels
+

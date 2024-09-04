@@ -93,3 +93,4 @@ def _random_select_and_remove(number_list, n):
 if __name__ == '__main__':
     config = get_dataset_config('VOC')
     print(config)
+    config = get_dataset_config("ade")
