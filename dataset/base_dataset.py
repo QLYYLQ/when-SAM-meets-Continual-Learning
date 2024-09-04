@@ -1,13 +1,19 @@
 import os
+from typing import Dict, Any
+
+import numpy as np
+import torchvision as tv
 from torch.utils.data import Dataset
 from PIL import Image
-import numpy as np
+from .register import dataset_entrypoints
+from .utils.filter_images import filter_images, save_list_from_filter, load_list_from_path
 
 
 # 这里存放的是dataset的模板，继承这个模板实现相应的功能就可以了
 
 class BaseSegmentation(Dataset):
-    def __init__(self, root, train=True, transform=None, target_transform=None, need_index_name=True, classes=None):
+    def __init__(self, root, train=True, transform=None, target_transform=None, need_index_name=True, classes=None,
+                 ignore_index=None):
         self.root = root
         self._check_path_exists(root)
         self.transform = transform
@@ -17,10 +23,11 @@ class BaseSegmentation(Dataset):
         if need_index_name and classes is None:
             raise ValueError("you have to specify the classes when need index_name")
         self.classes = classes
-        self.classes[255]="ignore"
+        self.classes[255] = "ignore"
         splits_file = self._get_path()
         self._check_path_exists(splits_file)
         self.images = self._load_data_path_to_list(splits_file)
+        self.ignore_index = ignore_index
 
     @staticmethod
     def _check_path_exists(path):
@@ -39,7 +46,7 @@ class BaseSegmentation(Dataset):
         images = []
         with open(path, 'r') as f:
             for line in f:
-                x = line.split(",")
+                x = line.strip().split(",")
                 images.append((os.path.join(self.root, x[0]), os.path.join(self.root, x[1])))
         return images
 
@@ -53,9 +60,12 @@ class BaseSegmentation(Dataset):
         同时这里读取label默认读取全部label，如果有label对应空或者背景最好重写剔除
         """
         unique_values = np.unique(np.array(target).flatten())
-        target_text = [self.classes[x] for x in unique_values]
+        target_text = [self.classes[x] for x in unique_values if x not in self.ignore_index]
         text_prompt = ".".join(target_text)
         return text_prompt
+
+    def get_class_index(self):
+        return list(self.classes.keys())
 
     def __getitem__(self, index):
         image = Image.open(self.images[index][0]).convert('RGB')
@@ -66,9 +76,92 @@ class BaseSegmentation(Dataset):
             target = self.target_transform(target)
         if self.need_index_name:
             text_prompt = self._get_text_prompt_from_target(target)
-            return {"data": (image, target), "data_path": (self.images[index][0],self.images[index][1]), "text_prompt": text_prompt}
+            return {"data": (image, target), "data_path": (self.images[index][0], self.images[index][1]),
+                    "text_prompt": text_prompt}
         return {"data": (image, target), "data_path": (self.images[index][0], self.images[index][1])}
 
 
-if __name__ == '__main__':
-    path = r"F:\Code_Field\Python_Code\Pycharm_Code\dataset\my_dataset\data\PascalVOC12"
+class BaseIncrement(Dataset):
+
+    def __init__(self, segmentation_dataset_name=None, segmentation_config=None, train=True,
+                 labels=None, labels_old=None, overlap=True, masking=True, data_masking="current", no_memory=True,
+                 new_image_path=None, save_stage_image_list_path=None):
+        self.no_memory = no_memory
+        if not self.no_memory:
+            raise NotImplementedError("not implemented")
+
+        self.dataset = dataset_entrypoints(segmentation_dataset_name)(**segmentation_config)
+        self.__strip_ignore(labels)
+        self.__strip_ignore(labels_old)
+        assert not any(i in labels_old for i in labels)  # 排除忽略的index以后，之前stage训练的label和当前stage训练的label要互斥
+
+        if new_image_path is not None and os.path.exists(new_image_path):
+            idx = load_list_from_path(new_image_path)
+        else:
+            idx = filter_images(self.dataset, labels, labels_old, overlap=overlap)
+            if save_stage_image_list_path is not None:
+                save_list_from_filter(idx, save_stage_image_list_path)
+        self.dataset.images = idx
+        self.dataset.target_transform = self._create_target_transform()
+        self.train = train
+        self.order = self.dataset.get_class_index()
+        self.labels = []
+        self.labels_old = []
+        self.data_masking = data_masking
+        self.overlap = overlap
+        self.masking = masking
+
+        self._create_inverted_order()
+
+        reorder_transform = tv.transforms.Lambda(
+            lambda t: t.apply_(
+                lambda x: self.inverted_order[x] if x in self.inverted_order else self.masking_value
+            )
+        )
+
+    @staticmethod
+    def __strip_ignore(self, labels):
+        ignore_index = self.dataset.ignore_index
+        for i in ignore_index:
+            while i in labels:
+                labels.remove(i)
+
+    def _create_new_path_list(self):
+        """这里要重写，给数据集按照要求创建新的索引表"""
+        pass
+
+    def _create_inverted_order(self,mask_value=255):
+        self.inverted_order = {label: self.order.index(label) for label in self.order}
+        self.inverted_order[mask_value] = mask_value
+
+    def _create_target_transform(self):
+        reorder_transform = tv.transforms.Lambda(
+            lambda t: t.apply_(
+                lambda x: self.inverted_order[x] if x in self.inverted_order else masking_value
+            )
+        )
+
+        if self.masking:
+            if self.data_masking == "current":
+                tmp_labels = self.labels + [255]
+            elif self.data_masking == "current+old":
+                tmp_labels = self.labels_old + self.labels + [255]
+            elif self.data_masking == "all":
+                raise NotImplementedError(
+                    f"data_masking={self.data_masking} not yet implemented sorry not sorry."
+                )
+            elif self.data_masking == "new":
+                tmp_labels = self.labels
+                masking_value = 255
+
+            target_transform = tv.transforms.Lambda(
+                lambda t: t.
+                apply_(lambda x: self.inverted_order[x] if x in tmp_labels else masking_value)
+            )
+        else:
+            target_transform = reorder_transform
+            assert False
+        return target_transform
+
+    def __getitem__(self, index):
+        return self.dataset[index]

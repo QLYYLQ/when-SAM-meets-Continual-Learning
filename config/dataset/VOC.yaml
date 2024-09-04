@@ -22,4 +22,6 @@ dataset_setting:
     "default"
   need_index_name:
     True
+  ignore_index:
+    [0,255]
 Increment_setting:

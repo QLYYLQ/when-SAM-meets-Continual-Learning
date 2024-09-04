@@ -7,7 +7,7 @@ from typing_extensions import override
 import os
 from utils import get_dataset_config, auto_init
 
-
+from dataset.VOC import Segmentation
 class TestSegmentation(BaseSegmentation):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
@@ -37,6 +37,6 @@ dataset_config = get_dataset_config("VOC")
 print(dataset_config)
 init_dict = auto_init(TestSegmentation,dataset_config.dataset_setting)
 print(init_dict)
-dataset = TestSegmentation(**init_dict)
+dataset = Segmentation(**init_dict)
 for i in dataset:
     print(i["text_prompt"])

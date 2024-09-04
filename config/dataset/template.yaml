@@ -26,12 +26,16 @@ dataset_setting:
     "a file stored the index and class name for dataset. default is in classes/dataset_name_classes.pkl"
   need_index_name:
     True
+  ignore_index:
+    [0]#a list about the index to ignore
 Increment_setting:
   root:
     "path"
-  idxs_path:
+  segmentation_dataset_name:
+    "default is name.Segmentation"
+  new_image_path:
     "path"
-  save_path:
+  save_stage_image_list_path:
     None
   data_masking:
     True

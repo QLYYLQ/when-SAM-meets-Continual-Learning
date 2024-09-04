@@ -31,6 +31,7 @@ def _modify_dataset_config(config):
     """change default setting in config"""
     config = _modify_training(config)
     config = _modify_dataset_setting(config)
+    config = _modify_increment_setting(config)
     return config
 
 
@@ -88,6 +89,9 @@ def _check_config(config, template_config):
     for task, _ in config.evaluate.items():
         if not hasattr(config.training, task):
             raise AttributeError(f"please check the config, evaluate and training should have same task {task}")
+
+def _modify_increment_setting(config):
+    pass
 
 
 def _random_select_and_remove(number_list, n):

@@ -13,10 +13,10 @@ from typing_extensions import override
 class Segmentation(BaseSegmentation):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
-        self.type = "test"
 
     @override
     def _get_path(self):
+        # train 和 train_aug 文件一样
         return os.path.join(self.root, "splits","train.txt")
 
     @override
@@ -28,12 +28,6 @@ class Segmentation(BaseSegmentation):
                 images.append((os.path.join(self.root, x[0][1:]), os.path.join(self.root, x[1][1:])))
         return images
 
-    @override
-    def _get_text_prompt_from_target(self, target):
-        unique_values = np.unique(np.array(target).flatten())
-        target_text = [self.classes[x] for x in unique_values if x not in [0,255]]
-        text_prompt = ".".join(target_text)
-        return text_prompt
 
 @register_training_dataset
 class Increment(data.Dataset):
