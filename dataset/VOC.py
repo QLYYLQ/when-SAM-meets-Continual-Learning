@@ -50,7 +50,7 @@ class Segmentation(data.Dataset):
             and returns a transformed version. E.g, ``transforms.RandomCrop``
     """
 
-    def __init__(self, root, is_aug=True, transform=None, target_transform=None,index_name_dict=None,classes=None):
+    def __init__(self, root, is_aug=True, transform=None, target_transform=None,need_index_name=None,classes=None):
         """
         删除：image_set='train'
         因为测试使用别的数据集（调控是否只返回特定的图片）
@@ -67,7 +67,7 @@ class Segmentation(data.Dataset):
         self._check_dataset_exists(self.root)
         self.transform = transform
         self.target_transform = target_transform
-        self.index_name_dict = index_name_dict
+        self.need_index_name= need_index_name
         self.classes = classes
         # self.image_set = image_set
         splits_dir = os.path.join(self.root, 'splits')
@@ -119,9 +119,9 @@ class Segmentation(data.Dataset):
             img, target = self.transform(img, target)
         if self.target_transform is not None:
             target = self.target_transform(target)
-        if self.index_name_dict is not None:
-
-            return{"data": [img, target], "path": [self.images[index][0], self.images[index][1]],"text_prompt":"none"}
+        if self.need_index_name is not None:
+            text_pompt = self.get_text_prompt_from_target(target)
+            return{"data": [img, target], "path": [self.images[index][0], self.images[index][1]],"text_prompt":text_pompt}
         return {"data": [img, target], "path": [self.images[index][0], self.images[index][1]]}
 
     def apply_new_data_list(self, new_data_list_path):

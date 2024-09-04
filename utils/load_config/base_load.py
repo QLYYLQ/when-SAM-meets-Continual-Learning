@@ -14,12 +14,12 @@ def load_yaml_file(filepath):
         return yaml.safe_load(file)
 
 
-def get_config(config_path):
+def get_config(config_path,link_text):
     # Get the main configuration file
     main_cfg = load_yaml_file(config_path)
 
     # Get the default arguments, which are paths to other YAML files
-    default_args = main_cfg.pop('default_args', None)
+    default_args = main_cfg.pop(link_text, None)
 
     if default_args is not None:
         # Load the configuration from the default argument files
@@ -33,3 +33,8 @@ def get_config(config_path):
 
             main_cfg.update(default_config)
     return Munch.fromDict(main_cfg)
+
+if __name__ == '__main__':
+    config_path = r"F:\Code_Field\Python_Code\Pycharm_Code\dataset\my_dataset\config\dataset\ade.yaml"
+    config = get_config(config_path,"test")
+    print(config)

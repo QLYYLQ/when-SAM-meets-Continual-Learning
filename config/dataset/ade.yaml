@@ -1,31 +1,22 @@
-continue_learning:
-  named:
-    "ade"
-  located:
-    "暂时不明"
+name:
+  "ade"
+training:
+  #you and add your task as task_3 and so on
+  task_1:
+    training_type:
+      "overlapped"
+    design:
+      "100-50"
+    index_order:
+      "none"
+evaluate:
+  task_1:
+    type:
+      ["only stage","all"]
+dataset_setting:
+  root:
+    "path/to/dataset"
   class_number:
-    150
+    "150"
   classes_name:
-    "classes/ade_classes.txt"
-  training:
-    task_1:
-      training_type:
-        "none"
-      design:
-        "none"
-      index_order:
-        "none"
-    task_2:
-      training_type:
-        "none"
-      design:
-        "none"
-      index_order:
-        "none"
-  dataset:
-    Segmentation:
-      "setting for Segmentation dataset"
-    Increment:
-      "setting for Incremental dataset"
-    evaluation:
-      "setting for evaluation dataset"
+    "default"

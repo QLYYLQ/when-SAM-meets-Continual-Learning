@@ -1,24 +1,22 @@
-continue_learning:
-  named:
-    "bdd10k"
-  located:
-    "暂时不明"
+name:
+  "bdd10k"
+training:
+  #you and add your task as task_3 and so on
+  task_1:
+    training_type:
+      "overlapped"
+    design:
+      "16-2"
+    index_order:
+      "none"
+evaluate:
+  task_1:
+    type:
+      ["only stage","all"]
+dataset_setting:
+  root:
+    "path/to/dataset"
   class_number:
-    18
+    "18"
   classes_name:
-    "classes/bdd10k.txt"
-  training:
-    task_1:
-      training_type:
-        "none"
-      design:
-        "none"
-      index_order:
-        "none"
-    task_2:
-      training_type:
-        "none"
-      design:
-        "none"
-      index_order:
-        "none"
+    "default"
