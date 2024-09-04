@@ -14,7 +14,7 @@ def load_yaml_file(filepath):
         return yaml.safe_load(file)
 
 
-def get_config(config_path,link_text):
+def get_config(config_path,link_text=None):
     # Get the main configuration file
     main_cfg = load_yaml_file(config_path)
 

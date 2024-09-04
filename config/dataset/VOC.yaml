@@ -20,3 +20,5 @@ dataset_setting:
     "20"
   classes_name:
     "default"
+  need_index_name:
+    True

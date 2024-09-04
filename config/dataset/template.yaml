@@ -24,3 +24,6 @@ dataset_setting:
     "a number about the class number in dataset"
   classes_name:
     "a file stored the index and class name for dataset. default is in classes/dataset_name_classes.pkl"
+  need_index_name:
+    True
+
