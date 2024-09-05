@@ -21,7 +21,7 @@ class BaseSegmentation(Dataset):
             self.ignore_index = ignore_index
         self.root = root
         self._check_path_exists(root)
-        if transform is None:
+        if transform == "default":
             self.transform = tv.transforms.ToTensor()
         else:
             self.transform = transform
@@ -54,7 +54,7 @@ class BaseSegmentation(Dataset):
         with open(path, 'r') as f:
             for line in f:
                 x = line.strip().split(",")
-                images.append((os.path.join(self.root, x[0]), os.path.join(self.root, x[1])))
+                images.append((os.path.join(self.root, x[0]).replace(os.sep,"/"), os.path.join(self.root, x[1]).replace(os.sep,"/")))
         return images
 
     def apply_new_data_list(self, new_data_list_path):
@@ -89,7 +89,8 @@ class BaseSegmentation(Dataset):
             text_prompt = self._get_text_prompt_from_target(target)
             return {"data": (image, target), "path": (self.images[index][0], self.images[index][1]),
                     "text_prompt": text_prompt}
-        return {"data": (image, target), "path": (self.images[index][0], self.images[index][1])}
+        return {'data': (image, target), 'path': (
+            self.images[index][0], self.images[index][1])}
 
     def __len__(self):
         return len(self.images)

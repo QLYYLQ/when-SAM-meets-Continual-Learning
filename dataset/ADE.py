@@ -32,16 +32,16 @@ class Segmentation(BaseSegmentation):
             data_dict["scene"] = "none"
             return data_dict
         else:
-            data_dict["scene"] = self.scene_list[data_dict["data_path"][0]]
+            data_dict["scene"] = self.scene_list[data_dict["path"][0]]
             return data_dict
 
     def _get_scene(self,scene_path=None):
-        scene_list = []
-        xcene_path = os.path.join(self.root,"list",scene_path)
+        scene_list = {}
+        scene_path = os.path.join(self.root,"list",scene_path)
         with open(scene_path,'r') as f:
             for lines in f:
                 line = lines.strip().split(" ")
-                scene_list.append((os.path.join(self.root,"images","training",line[0]),line[1]))
+                scene_list[os.path.join(self.root,"images","training",line[0]+".jpg").replace(os.sep,"/")]=line[1]
         return scene_list
 
 @register_training_dataset

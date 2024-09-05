@@ -107,7 +107,7 @@ def _check_config(config, template_config):
         if not hasattr(config.dataset_setting, setting):
             raise AttributeError(f"please check the config, you should have dataset setting: {setting}")
     for setting, _ in template_config.increment_setting.items():
-        if not hasattr(config.dataset_setting, setting):
+        if not hasattr(config.increment_setting, setting):
             raise AttributeError(f"please check the config, you should have increment dataset setting: {setting}")
 
 
