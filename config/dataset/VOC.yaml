@@ -40,4 +40,4 @@ increment_setting:
   new_image_path:
     "path"
   save_stage_image_list_path:
-    None
+    "default"

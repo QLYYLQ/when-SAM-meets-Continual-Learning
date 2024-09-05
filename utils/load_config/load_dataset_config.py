@@ -29,13 +29,13 @@ def _load_template_config():
 
 def _modify_dataset_config(config):
     """change default setting in config"""
-    config.training = _modify_training(config.training,config.class_number)
-    config.dataset_setting = _modify_dataset_setting(config.dataset_setting,config.name)
-    config.increment_setting = _modify_increment_setting(config.increment_setting,config.name)
+    config.training = _modify_training(config.training, config.class_number)
+    config.dataset_setting = _modify_dataset_setting(config.dataset_setting, config.name)
+    config.increment_setting = _modify_increment_setting(config.increment_setting, config.name)
     return config
 
 
-def _modify_training(config,class_number):
+def _modify_training(config, class_number):
     copied_config = deepcopy(config)
     for task, task_setting in config.items():
         design = [int(x) for x in task_setting.design.split('-')]
@@ -51,14 +51,14 @@ def _modify_training(config,class_number):
         elif task_setting.index_order == "default":
             last_number = 0
             for key, number in stage_number.items():
-                number+=last_number
-                index_order[key]=label_list[last_number:number]
+                number += last_number
+                index_order[key] = label_list[last_number:number]
                 last_number = number
         copied_config[task].index_order = Munch.fromDict(index_order)
     return copied_config
 
 
-def _modify_dataset_setting(config,dataset_name):
+def _modify_dataset_setting(config, dataset_name):
     classes_path = dataset_config_root_path.joinpath(config.classes)
     # 修改default的classes name路径
     if config.classes == 'default':
@@ -73,6 +73,15 @@ def _modify_dataset_setting(config,dataset_name):
         raise FileNotFoundError(f"please check the file, dataset root is missing. the path is {dataset_root}")
     config.root = str(dataset_root)
 
+    return config
+
+
+def _modify_increment_setting(config, dataset_name):
+    if config.segmentation_dataset_name == "default":
+        config.segmentation_dataset_name = dataset_name + ".Segmentation"
+    if config.save_stage_image_list_path == "default":
+        #这里在后续加载任务中实现，不是在这里实现
+        pass
     return config
 
 
@@ -94,11 +103,12 @@ def _check_config(config, template_config):
     for task, _ in config.evaluate.items():
         if not hasattr(config.training, task):
             raise AttributeError(f"please check the config, evaluate and training should have same task {task}")
-
-def _modify_increment_setting(config,dataset_name):
-    if config.segmentation_dataset_name == "default":
-        config.segmentation_dataset_name = dataset_name+".Segmentation"
-    return config
+    for setting, _ in template_config.dataset_setting.items():
+        if not hasattr(config.dataset_setting, setting):
+            raise AttributeError(f"please check the config, you should have dataset setting: {setting}")
+    for setting, _ in template_config.increment_setting.items():
+        if not hasattr(config.dataset_setting, setting):
+            raise AttributeError(f"please check the config, you should have increment dataset setting: {setting}")
 
 
 def _random_select_and_remove(number_list, n):

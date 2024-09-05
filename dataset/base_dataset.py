@@ -72,7 +72,7 @@ class BaseSegmentation(Dataset):
         return text_prompt
 
     def get_class_index(self):
-        return list(self.classes.keys())
+        return [x for x in self.classes.keys() if x not in self.ignore_index]
 
     def _modify_classes_dict(self):
         for i in self.ignore_index:
@@ -136,42 +136,38 @@ class BaseIncrement(Dataset):
             while i in labels:
                 labels.remove(i)
 
-    def _create_new_path_list(self):
-        """这里要重写，给数据集按照要求创建新的索引表"""
-        pass
-
     def _create_inverted_order(self, mask_value=255):
         # 映射label和索引
         self.inverted_order = {label: self.order.index(label) for label in self.order if label not in self.ignore_index}
 
     def _create_target_transform(self):
-        reorder_transform = tv.transforms.Lambda(
+        mask_value = self.mask_value
+        target_transform = tv.transforms.Lambda(
             lambda t: t.apply_(
-                lambda x: self.inverted_order[x] if x in self.inverted_order else masking_value
+                lambda x: x if x in self.order else mask_value
             )
         )
 
         if self.masking:
             if self.data_masking == "current":
-                tmp_labels = self.labels + [255]
+                tmp_labels = self.labels + [mask_value]
             elif self.data_masking == "current+old":
                 tmp_labels = self.labels_old + self.labels + [255]
-            elif self.data_masking == "all":
-                raise NotImplementedError(
-                    f"data_masking={self.data_masking} not yet implemented sorry not sorry."
-                )
-            elif self.data_masking == "new":
-                tmp_labels = self.labels
-                masking_value = 255
-
+            # elif self.data_masking == "all":
+            #     # 全部保留
+            #     target_transform = None
+            # # elif self.data_masking == "new":
+            # #     tmp_labels = self.labels
+            # #     masking_value = 255
+            #
             target_transform = tv.transforms.Lambda(
                 lambda t: t.
-                apply_(lambda x: self.inverted_order[x] if x in tmp_labels else masking_value)
+                apply_(lambda x: x if x in tmp_labels else mask_value)
             )
-        else:
-            target_transform = reorder_transform
-            assert False
         return target_transform
 
     def __getitem__(self, index):
         return self.dataset[index]
+
+    def __len__(self):
+        return len(self.dataset)
