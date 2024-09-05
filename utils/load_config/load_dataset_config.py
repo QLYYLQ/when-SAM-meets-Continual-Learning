@@ -29,44 +29,48 @@ def _load_template_config():
 
 def _modify_dataset_config(config):
     """change default setting in config"""
-    config = _modify_training(config)
-    config = _modify_dataset_setting(config)
-    config = _modify_increment_setting(config)
+    config.training = _modify_training(config.training,config.class_number)
+    config.dataset_setting = _modify_dataset_setting(config.dataset_setting,config.name)
+    config.increment_setting = _modify_increment_setting(config.increment_setting,config.name)
     return config
 
 
-def _modify_training(config):
-    training_set = config.training
-    classes_number = int(config.dataset_setting.class_number)
+def _modify_training(config,class_number):
     copied_config = deepcopy(config)
-    for task, task_setting in training_set.items():
+    for task, task_setting in config.items():
         design = [int(x) for x in task_setting.design.split('-')]
-        if sum(design) != classes_number:
+        if sum(design) != class_number:
             raise ValueError("please check the design. total number is not equal to class number")
-        if task_setting.index_order == "none":
-            index_order = {}
-            stage_number = {x: y for x, y in enumerate(design)}
-            label_list = [x for x in range(classes_number)]
+
+        label_list = [x for x in range(class_number)]
+        stage_number = {x: y for x, y in enumerate(design)}
+        index_order = {}
+        if task_setting.index_order == "random":
             for key, number in stage_number.items():
                 index_order[key], label_list = _random_select_and_remove(label_list, number)
-            copied_config.training[task].index_order = Munch.fromDict(index_order)
+        elif task_setting.index_order == "default":
+            last_number = 0
+            for key, number in stage_number.items():
+                index_order[key]=label_list[last_number:number]
+                last_number = number
+        copied_config[task].index_order = Munch.fromDict(index_order)
     return copied_config
 
 
-def _modify_dataset_setting(config):
-    classes_path = dataset_config_root_path.joinpath(config.dataset_setting.classes)
+def _modify_dataset_setting(config,dataset_name):
+    classes_path = dataset_config_root_path.joinpath(config.classes)
     # 修改default的classes name路径
-    if config.dataset_setting.classes == 'default':
-        classes_path = dataset_config_root_path.joinpath('classes', f"{config.name}_classes.pkl")
+    if config.classes == 'default':
+        classes_path = dataset_config_root_path.joinpath('classes', f"{dataset_name}_classes.pkl")
     if not osp.exists(classes_path):
         raise FileNotFoundError("please check the file, classes_name is missing")
     with open(classes_path, 'rb') as f:
         classes = pickle.load(f)
-    config.dataset_setting.classes = classes
-    dataset_root = dataset_root_path.joinpath(config.dataset_setting.root)
+    config.classes = classes
+    dataset_root = dataset_root_path.joinpath(config.root)
     if not osp.exists(dataset_root):
         raise FileNotFoundError(f"please check the file, dataset root is missing. the path is {dataset_root}")
-    config.dataset_setting.root = str(dataset_root)
+    config.root = str(dataset_root)
 
     return config
 
@@ -90,8 +94,9 @@ def _check_config(config, template_config):
         if not hasattr(config.training, task):
             raise AttributeError(f"please check the config, evaluate and training should have same task {task}")
 
-def _modify_increment_setting(config):
-
+def _modify_increment_setting(config,dataset_name):
+    if config.segmentation_dataset_name == "default":
+        config.segmentation_dataset_name = dataset_name+".Segmentation"
     return config
 
 
