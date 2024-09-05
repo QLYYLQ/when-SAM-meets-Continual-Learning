@@ -19,8 +19,6 @@ def filter_images(dataset, labels, labels_old, overlap):
 
     """
     index = []
-    if 0 in labels:
-        labels.remove(0)
     labels_cum = [x for x in labels + labels_old if x != 0] + [0]
     if overlap:
         fil = lambda c: any(x in labels for x in cls)
@@ -44,5 +42,5 @@ def load_list_from_path(index,save_path):
     new_list = []
     with open(save_path,"r") as f:
         for line in f:
-            x = line[:-1].split(",")
+            x = line[:-1].split().split(",")
             new_list.append((x[0],x[1]))

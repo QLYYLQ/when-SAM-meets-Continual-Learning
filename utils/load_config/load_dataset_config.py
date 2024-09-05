@@ -51,6 +51,7 @@ def _modify_training(config,class_number):
         elif task_setting.index_order == "default":
             last_number = 0
             for key, number in stage_number.items():
+                number+=last_number
                 index_order[key]=label_list[last_number:number]
                 last_number = number
         copied_config[task].index_order = Munch.fromDict(index_order)

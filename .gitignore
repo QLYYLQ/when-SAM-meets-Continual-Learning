@@ -8,8 +8,12 @@
 /tmp/
 
 # 忽略 test 文件夹
-/test/
-/data/
+/text/
+/data/*.zip
+/data/*.tar.gz
+/data/ADEChallengeData2016
+/data/PascalVOC12
+
 # 忽略特定的编程语言和框架的缓存文件
 # Python
 __pycache__/
