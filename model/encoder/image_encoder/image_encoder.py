@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 from typing import Type, Optional, Tuple
 from .register import register_module
-from .vit_parts import PatchEmbed, Block, LayerNorm2d
-
+from .vit_parts import PatchEmbed, Block
+from ..common import LayerNorm2d
 
 @register_module
 class ViT(nn.Module):
