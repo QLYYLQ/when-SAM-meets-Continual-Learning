@@ -1,7 +1,7 @@
 import os.path as osp
 import random
 from pathlib import Path
-from base_load import get_config
+from utils.load_config.base_load import get_config
 from munch import Munch
 import pickle
 from copy import deepcopy
@@ -85,30 +85,44 @@ def _modify_increment_setting(config_transient, dataset_name):
     return config_transient
 
 
-def _check_config(config_transient, template_config):
-    for setting, _ in template_config.items():
-        if not hasattr(config_transient, setting):
-            raise AttributeError(f"please check the config, {setting} is missing")
-    if not hasattr(config_transient.training, "task_1"):
-        raise AttributeError("must design task_1 at first")
+# def _check_config(config_transient, template_config):
+#     for setting, _ in template_config.items():
+#         if not hasattr(config_transient, setting):
+#             raise AttributeError(f"please check the config, {setting} is missing")
+#     if not hasattr(config_transient.training, "task_1"):
+#         raise AttributeError("must design task_1 at first")
+#
+#     for task, task_setting in config_transient.training.items():
+#         for setting, _ in template_config.training.task_1.items():
+#             if not hasattr(task_setting, setting):
+#                 raise AttributeError(f"please check the config, in {task}, the setting: {setting} is missing")
+#     for task, task_setting in config_transient.evaluate.items():
+#         for setting, _ in template_config.evaluate.task_1.items():
+#             if not hasattr(task_setting, setting):
+#                 raise AttributeError(f"please check the config, in {task}, the setting: {setting} is missing")
+#     for task, _ in config_transient.evaluate.items():
+#         if not hasattr(config_transient.training, task):
+#             raise AttributeError(f"please check the config, evaluate and training should have same task {task}")
+#     for setting, _ in template_config.dataset_setting.items():
+#         if not hasattr(config_transient.dataset_setting, setting):
+#             raise AttributeError(f"please check the config, you should have dataset setting: {setting}")
+#     for setting, _ in template_config.increment_setting.items():
+#         if not hasattr(config_transient.increment_setting, setting):
+#             raise AttributeError(f"please check the config, you should have increment dataset setting: {setting}")
 
-    for task, task_setting in config_transient.training.items():
-        for setting, _ in template_config.training.task_1.items():
-            if not hasattr(task_setting, setting):
-                raise AttributeError(f"please check the config, in {task}, the setting: {setting} is missing")
-    for task, task_setting in config_transient.evaluate.items():
-        for setting, _ in template_config.evaluate.task_1.items():
-            if not hasattr(task_setting, setting):
-                raise AttributeError(f"please check the config, in {task}, the setting: {setting} is missing")
-    for task, _ in config_transient.evaluate.items():
-        if not hasattr(config_transient.training, task):
-            raise AttributeError(f"please check the config, evaluate and training should have same task {task}")
-    for setting, _ in template_config.dataset_setting.items():
-        if not hasattr(config_transient.dataset_setting, setting):
-            raise AttributeError(f"please check the config, you should have dataset setting: {setting}")
-    for setting, _ in template_config.increment_setting.items():
-        if not hasattr(config_transient.increment_setting, setting):
-            raise AttributeError(f"please check the config, you should have increment dataset setting: {setting}")
+def _check_config(config_transient, template_config):
+    base_setting = set(config_transient.keys())
+    base_template_setting = set(template_config.keys())
+    unsettings = base_template_setting - base_setting
+    if unsettings:
+        raise ValueError(f"please check the template, you have something unsetting in your config which is: {unsettings}")
+    for template_setting in base_template_setting:
+        if isinstance(template_config[template_setting],Munch):
+            _check_config(config_transient[template_setting], template_config[template_setting])
+
+
+
+
 
 
 def _random_select_and_remove(number_list, n):

@@ -1,6 +1,6 @@
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent.absolute()))
+# import sys
+# from pathlib import Path
+# sys.path.append(str(Path(__file__).parent.parent.absolute()))
 import numpy as np
 from dataset.base_dataset import BaseSegmentation
 from typing_extensions import override
@@ -31,15 +31,17 @@ from utils import get_dataset_config, auto_init
 #     print(i["text_prompt"])
 
 
-config = get_dataset_config("ADE")
-from dataset import dataset_entrypoints
+# config = get_dataset_config("ADE")
+# from dataset import dataset_entrypoints
+#
+# DATASET=dataset_entrypoints("ADE.Segmentation")
+# init_dict = auto_init(DATASET,config.dataset_setting)
+#
+# dataset = DATASET(**init_dict)
+# for i in dataset:
+#     print(i["text_prompt"])
+#     print(i["scene"])
 
-DATASET=dataset_entrypoints("ADE.Segmentation")
-init_dict = auto_init(DATASET,config.dataset_setting)
 
-dataset = DATASET(**init_dict)
-for i in dataset:
-    print(i["text_prompt"])
-    print(i["scene"])
-
-
+test_list = [13,5]
+print(str(test_list))
