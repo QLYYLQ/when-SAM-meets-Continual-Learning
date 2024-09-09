@@ -28,6 +28,8 @@ increment_setting:
   segmentation_dataset_name:
     "default"
   #default is name.Segmentation
+  segmentation_config:
+    "default"
   overlap:
     True
   masking:
