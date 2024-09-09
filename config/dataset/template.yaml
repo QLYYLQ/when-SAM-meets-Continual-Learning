@@ -52,6 +52,7 @@ increment_setting:
     True
   new_image_path:
     "path"
+  # please write the absolute path
   save_stage_image_list_path:
     "default"
 
