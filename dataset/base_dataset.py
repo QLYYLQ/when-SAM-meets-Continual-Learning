@@ -1,6 +1,5 @@
 import os
-from typing import Dict, Any
-
+from typing import Optional,List,Callable
 import numpy as np
 import torchvision as tv
 from torch.utils.data import Dataset
@@ -12,8 +11,15 @@ from .utils.filter_images import filter_images, save_list_from_filter, load_list
 # 这里存放的是dataset的模板，继承这个模板实现相应的功能就可以了
 
 class BaseSegmentation(Dataset):
-    def __init__(self, root, train=True, transform=None, target_transform=None, need_index_name=True, classes=None,
-                 ignore_index=None):
+    def __init__(self,
+                 root: str,
+                 train: bool = True,
+                 transform: Optional[Callable] = None,
+                 target_transform: Optional[Callable] = None,
+                 need_index_name: bool = True,
+                 classes: Optional[dict] = None,
+                 ignore_index: Optional[List] = None):
+
         if ignore_index is None:
             # 一般target中255都是忽略的地方（黑色背景）
             self.ignore_index = [255]
@@ -98,9 +104,19 @@ class BaseSegmentation(Dataset):
 
 class BaseIncrement(Dataset):
 
-    def __init__(self, segmentation_dataset_name=None, segmentation_config=None, train=True,
-                 labels=None, labels_old=None, overlap=True, masking=True, data_masking="current", no_memory=True,
-                 new_image_path=None, save_stage_image_list_path=None,mask_value=255):
+    def __init__(self,
+                 segmentation_dataset_name: str = None,
+                 segmentation_config: dict = None,
+                 train: bool = True,
+                 labels: list = None,
+                 labels_old: list = None,
+                 overlap: bool = True,
+                 masking: bool = True,
+                 data_masking: str = "current",
+                 no_memory: bool = True,
+                 new_image_path: str = None,
+                 save_stage_image_list_path: str = None,
+                 mask_value: int = 255):
         self.no_memory = no_memory
         if not self.no_memory:
             raise NotImplementedError("not implemented")

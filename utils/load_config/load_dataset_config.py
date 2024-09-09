@@ -1,7 +1,7 @@
 import os.path as osp
 import random
 from pathlib import Path
-from .base_load import get_config
+from base_load import get_config
 from munch import Munch
 import pickle
 from copy import deepcopy
@@ -27,17 +27,17 @@ def _load_template_config():
     return config
 
 
-def _modify_dataset_config(config):
+def _modify_dataset_config(config_transient):
     """change default setting in config"""
-    config.training = _modify_training(config.training, config.class_number)
-    config.dataset_setting = _modify_dataset_setting(config.dataset_setting, config.name)
-    config.increment_setting = _modify_increment_setting(config.increment_setting, config.name)
-    return config
+    config_transient.training = _modify_training(config_transient.training, config_transient.class_number)
+    config_transient.dataset_setting = _modify_dataset_setting(config_transient.dataset_setting, config_transient.name)
+    config_transient.increment_setting = _modify_increment_setting(config_transient.increment_setting, config_transient.name)
+    return config_transient
 
 
-def _modify_training(config, class_number):
-    copied_config = deepcopy(config)
-    for task, task_setting in config.items():
+def _modify_training(config_transient, class_number):
+    copied_config = deepcopy(config_transient)
+    for task, task_setting in config_transient.items():
         design = [int(x) for x in task_setting.design.split('-')]
         if sum(design) != class_number:
             raise ValueError("please check the design. total number is not equal to class number")
@@ -58,56 +58,56 @@ def _modify_training(config, class_number):
     return copied_config
 
 
-def _modify_dataset_setting(config, dataset_name):
-    classes_path = dataset_config_root_path.joinpath(config.classes)
+def _modify_dataset_setting(config_transient, dataset_name):
+    classes_path = dataset_config_root_path.joinpath(config_transient.classes)
     # 修改default的classes name路径
-    if config.classes == 'default':
+    if config_transient.classes == 'default':
         classes_path = dataset_config_root_path.joinpath('classes', f"{dataset_name}_classes.pkl")
     if not osp.exists(classes_path):
         raise FileNotFoundError("please check the file, classes_name is missing")
     with open(classes_path, 'rb') as f:
         classes = pickle.load(f)
-    config.classes = classes
-    dataset_root = dataset_root_path.joinpath(config.root)
+    config_transient.classes = classes
+    dataset_root = dataset_root_path.joinpath(config_transient.root)
     if not osp.exists(dataset_root):
         raise FileNotFoundError(f"please check the file, dataset root is missing. the path is {dataset_root}")
-    config.root = str(dataset_root)
+    config_transient.root = str(dataset_root)
 
-    return config
+    return config_transient
 
 
-def _modify_increment_setting(config, dataset_name):
-    if config.segmentation_dataset_name == "default":
-        config.segmentation_dataset_name = dataset_name + ".Segmentation"
-    if config.save_stage_image_list_path == "default":
+def _modify_increment_setting(config_transient, dataset_name):
+    if config_transient.segmentation_dataset_name == "default":
+        config_transient.segmentation_dataset_name = dataset_name + ".Segmentation"
+    if config_transient.save_stage_image_list_path == "default":
         #这里在后续加载任务中实现，不是在这里实现
         pass
-    return config
+    return config_transient
 
 
-def _check_config(config, template_config):
+def _check_config(config_transient, template_config):
     for setting, _ in template_config.items():
-        if not hasattr(config, setting):
+        if not hasattr(config_transient, setting):
             raise AttributeError(f"please check the config, {setting} is missing")
-    if not hasattr(config.training, "task_1"):
+    if not hasattr(config_transient.training, "task_1"):
         raise AttributeError("must design task_1 at first")
 
-    for task, task_setting in config.training.items():
+    for task, task_setting in config_transient.training.items():
         for setting, _ in template_config.training.task_1.items():
             if not hasattr(task_setting, setting):
                 raise AttributeError(f"please check the config, in {task}, the setting: {setting} is missing")
-    for task, task_setting in config.evaluate.items():
+    for task, task_setting in config_transient.evaluate.items():
         for setting, _ in template_config.evaluate.task_1.items():
             if not hasattr(task_setting, setting):
                 raise AttributeError(f"please check the config, in {task}, the setting: {setting} is missing")
-    for task, _ in config.evaluate.items():
-        if not hasattr(config.training, task):
+    for task, _ in config_transient.evaluate.items():
+        if not hasattr(config_transient.training, task):
             raise AttributeError(f"please check the config, evaluate and training should have same task {task}")
     for setting, _ in template_config.dataset_setting.items():
-        if not hasattr(config.dataset_setting, setting):
+        if not hasattr(config_transient.dataset_setting, setting):
             raise AttributeError(f"please check the config, you should have dataset setting: {setting}")
     for setting, _ in template_config.increment_setting.items():
-        if not hasattr(config.increment_setting, setting):
+        if not hasattr(config_transient.increment_setting, setting):
             raise AttributeError(f"please check the config, you should have increment dataset setting: {setting}")
 
 
