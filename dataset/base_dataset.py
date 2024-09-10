@@ -6,11 +6,11 @@ from torch.utils.data import Dataset
 from PIL import Image
 from .register import dataset_entrypoints
 from .utils.filter_images import filter_images, save_list_from_filter, load_list_from_path
-
+from torch.utils.data import Dataset,DataLoader
 
 # 这里存放的是dataset的模板，继承这个模板实现相应的功能就可以了
 
-class BaseSegmentation(Dataset):
+class BaseSplit(Dataset):
     def __init__(self,
                  root: str,
                  train: bool = True,
@@ -19,23 +19,23 @@ class BaseSegmentation(Dataset):
                  need_index_name: bool = True,
                  classes: Optional[dict] = None,
                  ignore_index: Optional[List] = None,
-                 mask_value: Optional[int] = None):
+                 mask_value: int = 255):
 
         if ignore_index is None:
             # 一般target中255都是忽略的地方（黑色背景）
             self.ignore_index = [255]
         else:
-            self.ignore_index = ignore_index
+            self.ignore_index = ignore_index if 255 in ignore_index else ignore_index+[255]
         self.root = root
         self.mask_value = mask_value
         self._check_path_exists(root)
-
+        self.is_filter = False
         if not transform:
             self._init_image_transform()
         else:
             self.transform = transform
         if not target_transform:
-            self._init_target_transform()
+            self.target_transform = self._init_target_transform
         else:
             self.target_transform = target_transform
 
@@ -56,18 +56,15 @@ class BaseSegmentation(Dataset):
             raise FileNotFoundError(
                 f'path not found or corrupted and the path is {path}'
             )
-
-    def _init_target_transform(self):
+    def _init_target_transform(self,image):
         """把一些需要忽略掉的label对应的target换成255"""
-        target_transform = tv.transforms.Lambda(
-            lambda t: t.apply_(
-                lambda x: x if x not in self.ignore_index else self.mask_value
-            )
-        )
-        self.target_transform = tv.transforms.Compose([tv.transforms.ToTensor(), target_transform])
+        image = np.array(image)
+        mask = np.isin(image, self.ignore_index)
+        image[mask] = self.mask_value
+        return image
 
     def _init_image_transform(self):
-        self.image_transform = tv.transforms.Compose([tv.transforms.ToTensor()])
+        self.transform = tv.transforms.Compose([tv.transforms.ToTensor()])
 
     def _get_path(self):
         """这个类需要被重写，引导到储存文件图片路径的文档，默认是root_dir下list中train.txt"""
@@ -105,18 +102,24 @@ class BaseSegmentation(Dataset):
             self.classes[i] = "ignore"
 
     def __getitem__(self, index):
+        single_batch={}
+        single_batch['path']=(self.images[index][0], self.images[index][1])
         image = Image.open(self.images[index][0]).convert('RGB')
         target = Image.open(self.images[index][1])
-        if self.transform is not None:
-            image, target = self.transform(image, target)
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-        if self.need_index_name:
-            text_prompt = self._get_text_prompt_from_target(target)
-            return {"data": (image, target), "path": (self.images[index][0], self.images[index][1]),
-                    "text_prompt": text_prompt}
-        return {'data': (image, target), 'path': (
-            self.images[index][0], self.images[index][1])}
+        if not self.is_filter:
+            if self.need_index_name:
+                text_prompt = self._get_text_prompt_from_target(target)+"."
+                single_batch["text_prompt"] = text_prompt
+            if self.target_transform is not None:
+                target = self.target_transform(target)
+            if self.transform is not None:
+                image = self.transform(image)
+                target = self.transform(target)
+            single_batch["data"]=(image, target)
+            return single_batch
+        else:
+            single_batch["data"] = (image, target)
+            return single_batch
 
     def __len__(self):
         return len(self.images)
@@ -212,10 +215,10 @@ class BaseSegmentation(Dataset):
 
 class BaseIncrement(Dataset):
     def __init__(self,
-                 segmentation_dataset_name: str = None,
-                 segmentation_config: dict = None,
+                 split_dataset_name: str = None,
+                 split_config: dict = None,
                  stage_index_dict: dict = None,
-                 index_path_dict: dict = None,
+                 stage_path_dict: dict = None,
                  train: bool = True,
                  overlap: bool = True,
                  masking: bool = True,
@@ -226,10 +229,10 @@ class BaseIncrement(Dataset):
         if not self.no_memory:
             raise NotImplementedError("not implemented")
 
-        self.dataset = dataset_entrypoints(segmentation_dataset_name)(**segmentation_config)
+        self.dataset = dataset_entrypoints(split_dataset_name)(**split_config)
         self.ignore_index = self.dataset.ignore_index
         self.stage_index_dict = stage_index_dict
-        self.index_path_dict = index_path_dict
+        self.stage_path_dict = stage_path_dict
         self.labels = []
         self.labels_old = []
         self.stage = 0
@@ -247,7 +250,7 @@ class BaseIncrement(Dataset):
         self.masking = masking
         self.mask_value = mask_value
         self._create_inverted_order()
-        self.dataset.target_transform = self._create_target_transform()
+        self.dataset.target_transform.append(self._create_target_transform())
 
     def __strip_ignore(self, labels):
         for i in self.ignore_index:
@@ -285,6 +288,7 @@ class BaseIncrement(Dataset):
 
     def update_stage(self, stage_number):
         max_stage = len(self.stage_index_dict.keys())
+        labels_old = []
         if stage_number >= max_stage:
             raise ValueError("stage number out of range")
         if stage_number == 0:
@@ -292,7 +296,11 @@ class BaseIncrement(Dataset):
             labels = self.stage_index_dict[stage_number]
         else:
             labels = self.stage_index_dict[stage_number]
-            labels_old = self.stage_index_dict[stage_number - 1]
+            for i in range(stage_number):
+                labels_old += self.stage_index_dict[i]
         self.labels = labels
         self.labels_old = labels_old
-        self.dataset.apply_new_data_list()
+        self.dataset.apply_new_data_list(self.stage_path_dict[stage_number])
+
+
+

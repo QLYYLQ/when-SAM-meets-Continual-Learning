@@ -8,7 +8,7 @@ from dataset import dataset_entrypoints
 # print(is_dataset_registered("VOC.Segmentation"))
 # dataset = dataset_entrypoints("VOC.Segmentation")(r"F:\Code_Field\Python_Code\Pycharm_Code\dataset\CVPR2021_PLOP\data\PascalVOC12")
 # dataset = VOCSegmentationIncremental(r"F:\Code_Field\Python_Code\Pycharm_Code\dataset\CVPR2021_PLOP\data\PascalVOC12")
-from dataset.VOC import Segmentation
+from dataset.VOC import Split
 
 order = [i for i in range(21)]
 

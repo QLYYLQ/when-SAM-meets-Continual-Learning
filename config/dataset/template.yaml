@@ -18,6 +18,8 @@ training:
     #      that only learn one more class in stage 2 and 3 and the index is 12 and 1.
     #      default for select index in order
     #      random for select index random
+    ignore_index:
+      [0]
 evaluate:
   task_1:
     type:
@@ -31,30 +33,28 @@ dataset_setting:
   #a file stored the index and class name for dataset. default is in classes/dataset_name_classes.pkl
   need_index_name:
     True
-  ignore_index:
-    [0]
   #a list about the index to ignore
 increment_setting:
-  segmentation_dataset_name:
+  increment_dataset_name:
     "default"
-  #default is name.Segmentation
-  segmentation_config:
+  # default is name.Increment
+  split_dataset_name:
     "default"
-  # default is using dataset_config, you can also write your own config in this to satisfy your own segmentation_dataset
+  #default is name.split
+  split_config:
+    "default"
+  # default is using dataset_config, you can also write your own config in this to satisfy your own split_dataset
   overlap:
     True
   masking:
     True
   data_masking:
     "current"
-  #current or current+old or all
+  # current or current+old or all
   no_memory:
     True
-  new_image_path:
-    "path"
-  # please write the absolute path
-  save_stage_image_list_path:
-    "default"
+  save_stage_image_path:
+    "None"
 
 
 

@@ -2,7 +2,7 @@
 # from pathlib import Path
 # sys.path.append(str(Path(__file__).parent.parent.absolute()))
 import numpy as np
-from dataset.base_dataset import BaseSegmentation
+from dataset.base_dataset import BaseSplit
 from typing_extensions import override
 import os
 from utils import get_dataset_config, auto_init

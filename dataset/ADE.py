@@ -1,7 +1,7 @@
 from torch import overrides
 
 from .register import register_training_dataset,register_validation_dataset
-from .base_dataset import BaseIncrement,BaseSegmentation
+from dataset.base_dataset import BaseIncrement,BaseSplit
 from typing_extensions import override
 import os
 
@@ -18,7 +18,7 @@ def _create_path_list(root_path,save_path):
                 f.write(f"images/training/{image},annotations/training/{target}\n")
 
 @register_training_dataset
-class Segmentation(BaseSegmentation):
+class Split(BaseSplit):
     def __init__(self,scene_path=None,**kwargs):
         super().__init__(**kwargs)
         self.scene_path = scene_path

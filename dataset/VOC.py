@@ -2,13 +2,13 @@ import os
 
 import torch.utils.data as data
 from .register import register_training_dataset, register_validation_dataset
-from .base_dataset import BaseSegmentation,BaseIncrement
+from dataset.base_dataset import BaseSplit,BaseIncrement
 from typing_extensions import override
 
 
 
 @register_training_dataset
-class Segmentation(BaseSegmentation):
+class Split(BaseSplit):
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
 
@@ -17,14 +17,7 @@ class Segmentation(BaseSegmentation):
         # train 和 train_aug 文件一样
         return os.path.join(self.root, "splits","train.txt")
 
-    @override
-    def _load_data_path_to_list(self, path):
-        images = []
-        with open(path, 'r') as f:
-            for line in f:
-                x = line.strip().split(" ")
-                images.append((os.path.join(self.root, x[0][1:]), os.path.join(self.root, x[1][1:])))
-        return images
+
 
 
 # @register_training_dataset
@@ -198,7 +191,7 @@ class Validation(data.Dataset):
     ):
         """感觉测试数据中的实现不需要考虑是否overlap，后续包装中可以通过传入的labels调整dataset为disjoint或者overlap"""
         self.root = root
-        self.dataset = Segmentation(root,need_index_name=True,transform=transform,classes=classes,target_transform=target_transform)
+        self.dataset = Split(root, need_index_name=True, transform=transform, classes=classes, target_transform=target_transform)
         self.order = order
         # 感觉这两个参数目前用不到
         self.labels = labels

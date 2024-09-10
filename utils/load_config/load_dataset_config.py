@@ -37,12 +37,15 @@ def _modify_dataset_config(config_transient):
 
 def _modify_training(config_transient, class_number):
     copied_config = deepcopy(config_transient)
+    class_index = [x for x in range(class_number)]
     for task, task_setting in config_transient.items():
+        ignore_index = config_transient[task].ignore_index
+        class_number = class_number-len(ignore_index)
         design = [int(x) for x in task_setting.design.split('-')]
-        if sum(design) != class_number:
+        if sum(design)+sum(ignore_index) != class_number:
             raise ValueError("please check the design. total number is not equal to class number")
-
-        label_list = [x for x in range(class_number)]
+        # 排除ignore_index以后的类别
+        label_list = [x for x in class_index if x not in ignore_index]
         stage_number = {x: y for x, y in enumerate(design)}
         index_order = {}
         if task_setting.index_order == "random":
@@ -77,9 +80,11 @@ def _modify_dataset_setting(config_transient, dataset_name):
 
 
 def _modify_increment_setting(config_transient, dataset_name):
-    if config_transient.segmentation_dataset_name == "default":
-        config_transient.segmentation_dataset_name = dataset_name + ".Segmentation"
-    if config_transient.save_stage_image_list_path == "default":
+    if config_transient.increment_dataset_name == "default":
+        config_transient.increment_dataset_name = dataset_name+".Increment"
+    if config_transient.split_dataset_name == "default":
+        config_transient.split_dataset_name = dataset_name + ".Split"
+    if config_transient.save_stage_image_path == "default":
         #这里在后续加载任务中实现，不是在这里实现
         pass
     return config_transient

@@ -10,7 +10,7 @@ def modify_default_cfg(default_config, main_cfg):
 
 
 def load_yaml_file(filepath):
-    with open(filepath, 'r') as file:
+    with open(filepath, 'r',encoding="utf-8") as file:
         return yaml.safe_load(file)
 
 
