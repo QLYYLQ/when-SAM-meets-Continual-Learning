@@ -13,6 +13,7 @@
 /data/*.tar.gz
 /data/ADEChallengeData2016
 /data/PascalVOC12
+/tes_pic/
 
 # 忽略特定的编程语言和框架的缓存文件
 # Python
