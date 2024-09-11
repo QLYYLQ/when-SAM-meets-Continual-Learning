@@ -51,4 +51,4 @@ increment_setting:
   no_memory:
     True
   save_stage_image_path:
-    "default"
+    "None"

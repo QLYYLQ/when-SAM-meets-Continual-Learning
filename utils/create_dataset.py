@@ -77,9 +77,9 @@ def create_image_path_from_stage(dataset, labels, labels_old, save_path, overlap
 
 
 if __name__ == "__main__":
-    config = get_dataset_config("VOC")
+    config = get_dataset_config("ADE")
     print(config)
-    dataset = load_dataset_from_config(config, task_number=2, logger=None)
+    dataset = load_dataset_from_config(config, task_number=1, logger=None)
     from PIL import Image
     import numpy as np
     from matplotlib.colors import hex2color
