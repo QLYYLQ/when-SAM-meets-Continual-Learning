@@ -40,9 +40,9 @@ def _modify_training(config_transient, class_number):
     class_index = [x for x in range(class_number)]
     for task, task_setting in config_transient.items():
         ignore_index = config_transient[task].ignore_index
-        class_number = class_number-len(ignore_index)
+        class_number1 = class_number-len(ignore_index)
         design = [int(x) for x in task_setting.design.split('-')]
-        if sum(design)+sum(ignore_index) != class_number:
+        if sum(design)+sum(ignore_index) != class_number1:
             raise ValueError("please check the design. total number is not equal to class number")
         # 排除ignore_index以后的类别
         label_list = [x for x in class_index if x not in ignore_index]
@@ -57,6 +57,8 @@ def _modify_training(config_transient, class_number):
                 number += last_number
                 index_order[key] = label_list[last_number:number]
                 last_number = number
+        else:
+            task_setting.index_order = dict(task_setting.index_order)
         copied_config[task].index_order = Munch.fromDict(index_order)
     return copied_config
 

@@ -2,11 +2,10 @@ import os
 from typing import Optional, List, Callable
 import numpy as np
 import torchvision as tv
-from torch.utils.data import Dataset
 from PIL import Image
 from .register import dataset_entrypoints
-from .utils.filter_images import filter_images, save_list_from_filter, load_list_from_path
-from torch.utils.data import Dataset,DataLoader
+from torch.utils.data import Dataset
+from typing_extensions import override
 
 # 这里存放的是dataset的模板，继承这个模板实现相应的功能就可以了
 
@@ -115,6 +114,7 @@ class BaseSplit(Dataset):
             if self.transform is not None:
                 image = self.transform(image)
                 target = self.transform(target)
+                target = target.squeeze()
             single_batch["data"]=(image, target)
             return single_batch
         else:
@@ -124,93 +124,6 @@ class BaseSplit(Dataset):
     def __len__(self):
         return len(self.images)
 
-
-# class BaseIncrement(Dataset):
-#
-#     def __init__(self,
-#                  segmentation_dataset_name: str = None,
-#                  segmentation_config: dict = None,
-#                  train: bool = True,
-#                  labels: list = None,
-#                  labels_old: list = None,
-#                  overlap: bool = True,
-#                  masking: bool = True,
-#                  data_masking: str = "current",
-#                  no_memory: bool = True,
-#                  new_image_path: str = None,
-#                  save_stage_image_list_path: str = None,
-#                  mask_value: int = 255):
-#         self.no_memory = no_memory
-#         if not self.no_memory:
-#             raise NotImplementedError("not implemented")
-#
-#         self.dataset = dataset_entrypoints(segmentation_dataset_name)(**segmentation_config)
-#         self.ignore_index = self.dataset.ignore_index
-#         self.__strip_ignore(labels)
-#         self.__strip_ignore(labels_old)
-#         assert not any(i in labels_old for i in labels)  # 排除忽略的index以后，之前stage训练的label和当前stage训练的label要互斥
-#
-#         if new_image_path is not None and os.path.exists(new_image_path):
-#             idx = load_list_from_path(new_image_path)
-#         else:
-#             idx = filter_images(self.dataset, labels, labels_old, overlap=overlap)
-#             if save_stage_image_list_path is not None:
-#                 save_list_from_filter(idx, save_stage_image_list_path)
-#
-#         self.dataset.images = idx
-#
-#         self.train = train
-#
-#         self.order = self.dataset.get_class_index()
-#         self.labels = labels
-#         self.labels_old = labels_old
-#         self.data_masking = data_masking
-#         self.overlap = overlap
-#         self.masking = masking
-#         self.mask_value = mask_value
-#         self._create_inverted_order()
-#         self.dataset.target_transform = self._create_target_transform()
-#
-#     def __strip_ignore(self, labels):
-#         for i in self.ignore_index:
-#             while i in labels:
-#                 labels.remove(i)
-#
-#     def _create_inverted_order(self, mask_value=255):
-#         # 映射label和索引
-#         self.inverted_order = {label: self.order.index(label) for label in self.order if label not in self.ignore_index}
-#
-#     def _create_target_transform(self):
-#         mask_value = self.mask_value
-#         target_transform = tv.transforms.Lambda(
-#             lambda t: t.apply_(
-#                 lambda x: x if x in self.order else mask_value
-#             )
-#         )
-#
-#         if self.masking:
-#             if self.data_masking == "current":
-#                 tmp_labels = self.labels + [mask_value]
-#             elif self.data_masking == "current+old":
-#                 tmp_labels = self.labels_old + self.labels + [255]
-#             # elif self.data_masking == "all":
-#             #     # 全部保留
-#             #     target_transform = None
-#             # # elif self.data_masking == "new":
-#             # #     tmp_labels = self.labels
-#             # #     masking_value = 255
-#             #
-#             target_transform = tv.transforms.Lambda(
-#                 lambda t: t.
-#                 apply_(lambda x: x if x in tmp_labels else mask_value)
-#             )
-#         return target_transform
-#
-#     def __getitem__(self, index):
-#         return self.dataset[index]
-#
-#     def __len__(self):
-#         return len(self.dataset)
 
 
 class BaseIncrement(Dataset):
@@ -250,7 +163,7 @@ class BaseIncrement(Dataset):
         self.masking = masking
         self.mask_value = mask_value
         self._create_inverted_order()
-        self.dataset.target_transform.append(self._create_target_transform())
+        self.dataset.target_transform=self._create_target_transform
 
     def __strip_ignore(self, labels):
         for i in self.ignore_index:
@@ -261,24 +174,23 @@ class BaseIncrement(Dataset):
         # 映射label和索引
         self.inverted_order = {label: self.order.index(label) for label in self.order if label not in self.ignore_index}
 
-    def _create_target_transform(self):
+    def _create_target_transform(self,img):
+
         mask_value = self.mask_value
-        target_transform = tv.transforms.Lambda(
-            lambda t: t.apply_(
-                lambda x: x if x in self.order else mask_value
-            )
-        )
+        image_array = np.array(img)
         if self.masking:
             if self.data_masking == "current":
-                tmp_labels = self.labels + [mask_value]
+                tmp_labels = self.labels+[mask_value]
             elif self.data_masking == "current+old":
-                tmp_labels = self.labels_old + self.labels + [255]
-            target_transform = tv.transforms.Lambda(
-                lambda t: t.
-                apply_(lambda x: x if x in tmp_labels else mask_value)
-            )
-        total_transform = tv.transforms.Compose([tv.transforms.ToTensor(), target_transform])
-        return total_transform
+                tmp_labels = self.labels+self.labels_old+[mask_value]
+            else:
+                raise ValueError(f"masking type:{self.masking} not supported")
+            mask = np.isin(image_array, tmp_labels)
+            image_array[~mask] = mask_value
+        else:
+            mask = np.isin(image_array, self.order)
+            image_array[~mask] = mask_value
+        return image_array
 
     def __getitem__(self, index):
         return self.dataset[index]
@@ -304,3 +216,26 @@ class BaseIncrement(Dataset):
 
 
 
+class BaseEvaluate(BaseIncrement):
+    def __init__(self,no_stage_value = 224,**kwargs):
+        self.no_stage_value = no_stage_value
+        super().__init__(**kwargs)
+
+    @override
+    def _create_target_transform(self,img):
+
+        mask_value = self.mask_value
+        image_array = np.array(img)
+        if self.masking:
+            if self.data_masking == "current":
+                tmp_labels = self.labels+[mask_value]
+            elif self.data_masking == "current+old":
+                tmp_labels = self.labels+self.labels_old+[mask_value]
+            else:
+                raise ValueError(f"masking type:{self.masking} not supported")
+            mask = np.isin(image_array, tmp_labels)
+            image_array[~mask] = mask_value
+        else:
+            mask = np.isin(image_array, self.order)
+            image_array[~mask] = mask_value
+        return image_array

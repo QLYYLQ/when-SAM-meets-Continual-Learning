@@ -50,7 +50,7 @@ def init_task_path_from_config(config, dataset, task_number):
         os.makedirs(str(root_save_stage_image_list_path.joinpath(task_number)), exist_ok=True)
         # 调用迭代分割函数
         create_image_path_from_task(config, dataset, task_number)
-    stage_image_path = {stage: str(root_save_stage_image_list_path.joinpath(str(stage) + ".txt")) for stage in
+    stage_image_path = {stage: str(root_save_stage_image_list_path.joinpath(task_number,str(stage) + ".txt")) for stage in
                         index_order.keys()}
     return stage_image_path
 
@@ -79,9 +79,10 @@ def create_image_path_from_stage(dataset, labels, labels_old, save_path, overlap
 if __name__ == "__main__":
     config = get_dataset_config("VOC")
     print(config)
-    dataset = load_dataset_from_config(config, task_number=1, logger=None)
+    dataset = load_dataset_from_config(config, task_number=2, logger=None)
     from PIL import Image
-
+    import numpy as np
+    from matplotlib.colors import hex2color
     def tensor_to_image(tensor,i):
         # 确保tensor是CPU上的
         tensor = tensor.cpu()
@@ -98,9 +99,30 @@ if __name__ == "__main__":
         # 创建PIL图像
         image = Image.fromarray(numpy_array)
         image.save("F:\\Code_Field\\Python_Code\\Pycharm_Code\\dataset\\my_dataset\\test_pic"+f"\\{i}.png")
-        return image
+
+
+    color_map = {
+        1: '#FF0000', 2: '#00FF00', 3: '#0000FF', 4: '#FFFF00', 5: '#FF00FF',
+        6: '#00FFFF', 7: '#800000', 8: '#008000', 9: '#000080', 10: '#808000',
+        11: '#800080', 12: '#008080', 13: '#FFA500', 14: '#A52A2A', 15: '#DEB887',
+        16: '#5F9EA0', 17: '#7FFF00', 18: '#D2691E', 19: '#FF7F50', 20: '#6495ED',255:"#000000"
+    }
+    def label_to_image(label,i1):
+        height, width = label.shape[-2],label.shape[-1]
+        image = np.zeros((height, width, 3), dtype=np.uint8)
+        label = label*255
+        for i in range(1, 21):
+            mask = (label == i)
+            color = np.array(hex2color(color_map[i]))
+            image[mask] = (color * 255).astype(np.uint8)
+        image = Image.fromarray(image)
+        image.save("F:\\Code_Field\\Python_Code\\Pycharm_Code\\dataset\\my_dataset\\test_pic" + f"\\label_{i1}.png")
+
+
+
     for i,batch in enumerate(dataset):
-        tensor_to_image(batch["data"][1],i)
+        tensor_to_image(batch["data"][0],i)
+        label_to_image(batch["data"][1],i)
         print(batch["text_prompt"])
-        if i >10:
-            dataset.update(1)
+        if i >5:
+            dataset.update_stage(1)
