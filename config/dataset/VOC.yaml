@@ -21,7 +21,7 @@ training:
     index_order:
       "default"
     ignore_index:
-      [ 0 ]
+      [0]
 evaluate:
   task_1:
     type:
@@ -51,4 +51,4 @@ increment_setting:
   no_memory:
     True
   save_stage_image_path:
-    "None"
+    "default"

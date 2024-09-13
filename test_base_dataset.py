@@ -41,7 +41,8 @@ from utils import get_dataset_config, auto_init
 # for i in dataset:
 #     print(i["text_prompt"])
 #     print(i["scene"])
-
-
+#
+#
 test_list = [13,5]
 print(str(test_list))
+

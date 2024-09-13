@@ -1,6 +1,6 @@
 from torch import overrides
 
-from .register import register_training_dataset,register_validation_dataset
+from dataset.register import register_training_dataset,register_validation_dataset
 from dataset.base_dataset import BaseIncrement,BaseSplit
 from typing_extensions import override
 import os

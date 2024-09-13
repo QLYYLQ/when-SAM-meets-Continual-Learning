@@ -77,7 +77,7 @@ def create_image_path_from_stage(dataset, labels, labels_old, save_path, overlap
 
 
 if __name__ == "__main__":
-    config = get_dataset_config("ADE")
+    config = get_dataset_config("VOC")
     print(config)
     dataset = load_dataset_from_config(config, task_number=1, logger=None)
     from PIL import Image
@@ -117,7 +117,6 @@ if __name__ == "__main__":
             image[mask] = (color * 255).astype(np.uint8)
         image = Image.fromarray(image)
         image.save("F:\\Code_Field\\Python_Code\\Pycharm_Code\\dataset\\my_dataset\\test_pic" + f"\\label_{i1}.png")
-
 
 
     for i,batch in enumerate(dataset):

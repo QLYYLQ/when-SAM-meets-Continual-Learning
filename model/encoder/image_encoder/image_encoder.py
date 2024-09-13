@@ -1,9 +1,12 @@
 import torch
 import torch.nn as nn
-from typing import Type, Optional, Tuple
-from .register import register_module
-from .vit_parts import PatchEmbed, Block
-from ..common import LayerNorm2d
+from functools import partial
+from typing import Type, Optional, Tuple, Any, List
+from model.encoder.image_encoder.register import register_module
+from model.encoder.image_encoder.vit_parts import PatchEmbed, Block
+from model.encoder.image_encoder.swin_parts import SwinTransformer
+from model.common import LayerNorm2d
+
 
 @register_module
 class ViT(nn.Module):
@@ -18,12 +21,12 @@ class ViT(nn.Module):
             mlp_ratio: float = 4.0,
             out_chans: int = 256,
             qkv_bias: bool = True,
-            norm_layer: Type[nn.Module] = nn.LayerNorm,
+            norm_layer: Type[nn.Module] = partial(nn.LayerNorm,eps=1e-6),
             act_layer: Type[nn.Module] = nn.GELU,
             use_abs_pos: bool = True,
             use_rel_pos: bool = False,
             rel_pos_zero_init: bool = True,
-            window_size: int = 0,
+            window_size: int = 14,
             global_attn_indexes: Tuple[int, ...] = (),
     ) -> None:
         """
@@ -95,7 +98,7 @@ class ViT(nn.Module):
             LayerNorm2d(out_chans),
         )
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> Tuple[Any, List[Any]]:
         x = self.patch_embed(x)
         if self.pos_embed is not None:
             x = x + self.pos_embed
@@ -109,3 +112,71 @@ class ViT(nn.Module):
         x = self.neck(x.permute(0, 3, 1, 2))
 
         return x, interm_embeddings
+
+@register_module
+class Swin(SwinTransformer):
+    def __init__(self, out_features:List[int], pretrain_img_size, patch_size, in_chans, embed_dim,
+                 depths, num_heads, window_size, mlp_ratio, qkv_bias, qk_scale,
+                 drop_rate, attn_drop_rate, drop_path_rate, norm_layer, ape,
+                 patch_norm, out_indices, use_checkpoint):
+        super().__init__(
+            pretrain_img_size,
+            patch_size,
+            in_chans,
+            embed_dim,
+            depths,
+            num_heads,
+            window_size,
+            mlp_ratio,
+            qkv_bias,
+            qk_scale,
+            drop_rate,
+            attn_drop_rate,
+            drop_path_rate,
+            norm_layer,
+            ape,
+            patch_norm,
+            out_indices,
+            use_checkpoint=use_checkpoint,
+        )
+
+        self._out_features = out_features
+
+        self._out_feature_strides = {
+            "res2": 4,
+            "res3": 8,
+            "res4": 16,
+            "res5": 32,
+        }
+        self._out_feature_channels = {
+            "res2": self.num_features[0],
+            "res3": self.num_features[1],
+            "res4": self.num_features[2],
+            "res5": self.num_features[3],
+        }
+
+    def forward(self, x):
+        """
+        Args:
+            x: Tensor of shape (N,C,H,W). H, W must be a multiple of ``self.size_divisibility``.
+        Returns:
+            dict[str->Tensor]: names and the corresponding features
+        """
+        assert (
+                x.dim() == 4
+        ), f"SwinTransformer takes an input of shape (N, C, H, W). Got {x.shape} instead!"
+        outputs = {}
+        y = super().forward(x)
+        for k in y.keys():
+            if k in self._out_features:
+                outputs[k] = y[k]
+        return outputs
+
+    @property
+    def size_divisibility(self):
+        return 32
+
+if __name__ == '__main__':
+    image_model = ViT(img_size=1024, patch_size=16, in_chans=3, embed_dim=768, depth=3)
+    tensor = torch.rand(4, 3, 1024, 1024)
+    image_model(tensor)

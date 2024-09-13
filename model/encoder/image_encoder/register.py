@@ -7,3 +7,4 @@ def register_module(fn):
     dataset_name = ".".join(model_name_split[-2:])
     image_encoder_module_entrypoints[dataset_name] = fn
     return fn
+

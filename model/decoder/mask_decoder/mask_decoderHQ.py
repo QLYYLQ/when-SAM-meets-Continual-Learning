@@ -1,17 +1,10 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# Modified by HQ-SAM team
-# All rights reserved.
-
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-
 import torch
 from torch import nn
-from torch.nn import functional as F
 
 from typing import List, Tuple, Type
 
-from ..common import LayerNorm2d,MLP
+from model.common import LayerNorm2d
+from model.decoder.common import MLP
 
 
 class MaskDecoder(nn.Module):

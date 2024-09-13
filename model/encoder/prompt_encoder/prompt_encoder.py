@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from torch import nn
 from typing import Any, Optional, Tuple, Type
-from ..common import LayerNorm2d
-from .register import register_module
+from model.common import LayerNorm2d
+from model.encoder.image_encoder.register import register_module
 
 @register_module
 class PromptEncoder(nn.Module):

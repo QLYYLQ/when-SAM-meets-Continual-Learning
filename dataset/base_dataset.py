@@ -4,7 +4,7 @@ import numpy as np
 import torchvision as tv
 from PIL import Image
 from .register import dataset_entrypoints
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset,DataLoader
 from typing_extensions import override
 
 # 这里存放的是dataset的模板，继承这个模板实现相应的功能就可以了
@@ -164,6 +164,8 @@ class BaseIncrement(Dataset):
         self.mask_value = mask_value
         self._create_inverted_order()
         self.dataset.target_transform=self._create_target_transform
+        self.index = 0
+        self.update_flag = False
 
     def __strip_ignore(self, labels):
         for i in self.ignore_index:
@@ -193,7 +195,12 @@ class BaseIncrement(Dataset):
         return image_array
 
     def __getitem__(self, index):
-        return self.dataset[index]
+        if self.update_flag:
+            self.update_flag = False
+            self.index = index
+            return self.dataset[index -self.index]
+        if not self.update_flag:
+            return self.dataset[index]
 
     def __len__(self):
         return len(self.dataset)
@@ -213,6 +220,7 @@ class BaseIncrement(Dataset):
         self.labels = labels
         self.labels_old = labels_old
         self.dataset.apply_new_data_list(self.stage_path_dict[stage_number])
+        self.update_flag = True
 
 
 
