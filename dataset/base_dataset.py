@@ -4,9 +4,9 @@ import numpy as np
 import torchvision as tv
 from PIL import Image
 from .register import dataset_entrypoints
-from torch.utils.data import Dataset,DataLoader
+from torch.utils.data import Dataset
 from typing_extensions import override
-
+from random import shuffle
 # 这里存放的是dataset的模板，继承这个模板实现相应的功能就可以了
 
 class BaseSplit(Dataset):
@@ -127,6 +127,10 @@ class BaseSplit(Dataset):
 
 
 class BaseIncrement(Dataset):
+    """
+    不要不要不要不要使用dataloader中的shuffle选项，在dataset中以及手动实现了这个功能，因为暂时没有扒干净dataloader中的代码，shuffle
+    还算未定义行为，千万不要用，出现错误不负责
+    """
     def __init__(self,
                  split_dataset_name: str = None,
                  split_config: dict = None,
@@ -220,6 +224,7 @@ class BaseIncrement(Dataset):
         self.labels = labels
         self.labels_old = labels_old
         self.dataset.apply_new_data_list(self.stage_path_dict[stage_number])
+        shuffle(self.dataset.images)
         self.update_flag = True
 
 
