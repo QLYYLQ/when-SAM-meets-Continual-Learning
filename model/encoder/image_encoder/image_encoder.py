@@ -115,7 +115,7 @@ class ViT(nn.Module):
 
 @register_module
 class Swin(SwinTransformer):
-    def __init__(self, out_features:List[int], pretrain_img_size, patch_size, in_chans, embed_dim,
+    def __init__(self, out_features:List[str], pretrain_img_size, patch_size, in_chans, embed_dim,
                  depths, num_heads, window_size, mlp_ratio, qkv_bias, qk_scale,
                  drop_rate, attn_drop_rate, drop_path_rate, norm_layer, ape,
                  patch_norm, out_indices, use_checkpoint):
@@ -176,7 +176,12 @@ class Swin(SwinTransformer):
     def size_divisibility(self):
         return 32
 
+
+
+
+
 if __name__ == '__main__':
-    image_model = ViT(img_size=1024, patch_size=16, in_chans=3, embed_dim=768, depth=3)
-    tensor = torch.rand(4, 3, 1024, 1024)
-    image_model(tensor)
+    # image_model = ViT(img_size=1024, patch_size=16, in_chans=3, embed_dim=768, depth=3)
+    # tensor = torch.rand(4, 3, 1024, 1024)
+    # image_model(tensor)
+    image_model = Swin(["res2", "res3", "res4", "res5"])

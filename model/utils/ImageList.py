@@ -123,6 +123,7 @@ class ImageList(object):
             # max_size can be a tensor in tracing mode, therefore convert to list
             batch_shape = [len(tensors)] + list(tensors[0].shape[:-2]) + list(max_size)
             batched_imgs = tensors[0].new_full(batch_shape, pad_value)
+            # img 原图， pad_img 是填充好的图
             for img, pad_img in zip(tensors, batched_imgs):
                 pad_img[..., : img.shape[-2], : img.shape[-1]].copy_(img)
 
