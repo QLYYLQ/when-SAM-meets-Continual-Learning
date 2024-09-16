@@ -1,12 +1,17 @@
 import os
-from typing import Optional, List, Callable
 import numpy as np
+import torch
 import torchvision as tv
+from typing import Optional, List, Callable, Tuple
 from PIL import Image
-from .register import dataset_entrypoints
+from dataset.register import dataset_entrypoints
 from torch.utils.data import Dataset
 from typing_extensions import override
 from random import shuffle
+from torch import Tensor
+from model.utils.ImageList import ImageList
+
+
 # 这里存放的是dataset的模板，继承这个模板实现相应的功能就可以了
 
 class BaseSplit(Dataset):
@@ -18,23 +23,25 @@ class BaseSplit(Dataset):
                  need_index_name: bool = True,
                  classes: Optional[dict] = None,
                  ignore_index: Optional[List] = None,
+                 image_size: Tuple[int, int] = (800, 1330),
                  mask_value: int = 255):
 
         if ignore_index is None:
             # 一般target中255都是忽略的地方（黑色背景）
             self.ignore_index = [255]
         else:
-            self.ignore_index = ignore_index if 255 in ignore_index else ignore_index+[255]
+            self.ignore_index = ignore_index if 255 in ignore_index else ignore_index + [255]
         self.root = root
         self.mask_value = mask_value
         self._check_path_exists(root)
         self.is_filter = False
+        self.image_size = image_size
         if not transform:
-            self._init_image_transform()
+            self.transform = self._init_image_transform()
         else:
             self.transform = transform
         if not target_transform:
-            self.target_transform = self._init_target_transform
+            self.target_transform = self._init_target_transform()
         else:
             self.target_transform = target_transform
 
@@ -55,15 +62,66 @@ class BaseSplit(Dataset):
             raise FileNotFoundError(
                 f'path not found or corrupted and the path is {path}'
             )
-    def _init_target_transform(self,image):
-        """把一些需要忽略掉的label对应的target换成255"""
-        image = np.array(image)
-        mask = np.isin(image, self.ignore_index)
-        image[mask] = self.mask_value
-        return image
 
-    def _init_image_transform(self):
-        self.transform = tv.transforms.Compose([tv.transforms.ToTensor()])
+    def _init_target_transform(self) -> Callable:
+        """把一些需要忽略掉的label对应的target换成255"""
+
+        def process_image(image: Image) -> Image:
+            image = np.array(image)
+            mask = np.isin(image, self.ignore_index)
+            image[mask] = self.mask_value
+            return Image.fromarray(image)
+
+        return process_image
+
+    def resize_image_aspect_ratio(self,img:Image)->Image:
+        # 原始图片尺寸
+        min_size = (self.image_size[0], self.image_size[0])
+        max_size = (self.image_size[1], self.image_size[1])
+        original_width, original_height = img.size
+
+        # 计算纵横比
+        aspect_ratio = original_width / original_height
+
+        # 根据纵横比重新计算新的目标尺寸
+        if aspect_ratio >= 1:  # 宽图片
+            new_width = min(max_size[0], max(min_size[0], original_width))
+            new_height = int(new_width / aspect_ratio)
+            if new_height > max_size[1]:  # 如果计算的高度超出范围，则需要按照高度来重新计算
+                new_height = max_size[1]
+                new_width = int(new_height * aspect_ratio)
+        else:  # 高图片
+            new_height = min(max_size[1], max(min_size[1], original_height))
+            new_width = int(new_height * aspect_ratio)
+            if new_width > max_size[0]:  # 如果计算的宽度超出范围，则需要按照宽度来重新计算
+                new_width = max_size[0]
+                new_height = int(new_width / aspect_ratio)
+
+        # resize 图片并保持原始纵横比
+        resized_img = img.resize((new_width, new_height), Image.BILINEAR)
+
+        return resized_img
+
+    def _init_image_transform(self) -> Callable:
+        new_image_size = self.image_size
+
+        def process_image(image: Image, new_image_size: Tuple[int, int] = new_image_size) -> ImageList:
+            new_image = self.resize_image_aspect_ratio(image)
+            new_image = torch.tensor(np.array(new_image))
+            if len(new_image.shape)!= 3:
+                new_image = new_image.unsqueeze(-1)
+            new_image = new_image.permute(2, 0, 1)
+
+            image_size = new_image.shape[-2:]
+            color_image_size = (3,*new_image_size)
+            resize_image = torch.zeros(color_image_size, dtype=torch.float)
+            resize_image[:, :image_size[0], :image_size[1]] = new_image
+            mask = torch.ones(new_image_size, dtype=torch.bool)
+            mask[:image_size[0], :image_size[1]] = False
+            image_list = ImageList(resize_image, mask, image_size)
+            return image_list
+
+        return process_image
 
     def _get_path(self):
         """这个类需要被重写，引导到储存文件图片路径的文档，默认是root_dir下list中train.txt"""
@@ -101,21 +159,20 @@ class BaseSplit(Dataset):
             self.classes[i] = "ignore"
 
     def __getitem__(self, index):
-        single_batch={}
-        single_batch['path']=(self.images[index][0], self.images[index][1])
+        single_batch = {}
+        single_batch['path'] = (self.images[index][0], self.images[index][1])
         image = Image.open(self.images[index][0]).convert('RGB')
         target = Image.open(self.images[index][1])
         if not self.is_filter:
             if self.need_index_name:
-                text_prompt = self._get_text_prompt_from_target(target)+"."
+                text_prompt = self._get_text_prompt_from_target(target) + "."
                 single_batch["text_prompt"] = text_prompt
             if self.target_transform is not None:
                 target = self.target_transform(target)
             if self.transform is not None:
                 image = self.transform(image)
                 target = self.transform(target)
-                target = target.squeeze()
-            single_batch["data"]=(image, target)
+            single_batch["data"] = (image, target)
             return single_batch
         else:
             single_batch["data"] = (image, target)
@@ -125,12 +182,12 @@ class BaseSplit(Dataset):
         return len(self.images)
 
 
-
 class BaseIncrement(Dataset):
     """
     不要不要不要不要使用dataloader中的shuffle选项，在dataset中以及手动实现了这个功能，因为暂时没有扒干净dataloader中的代码，shuffle
     还算未定义行为，千万不要用，出现错误不负责
     """
+
     def __init__(self,
                  split_dataset_name: str = None,
                  split_config: dict = None,
@@ -167,7 +224,7 @@ class BaseIncrement(Dataset):
         self.masking = masking
         self.mask_value = mask_value
         self._create_inverted_order()
-        self.dataset.target_transform=self._create_target_transform
+        self.dataset.target_transform = self._create_target_transform
         self.index = 0
         self.update_flag = False
 
@@ -180,15 +237,15 @@ class BaseIncrement(Dataset):
         # 映射label和索引
         self.inverted_order = {label: self.order.index(label) for label in self.order if label not in self.ignore_index}
 
-    def _create_target_transform(self,img):
+    def _create_target_transform(self, img):
 
         mask_value = self.mask_value
         image_array = np.array(img)
         if self.masking:
             if self.data_masking == "current":
-                tmp_labels = self.labels+[mask_value]
+                tmp_labels = self.labels + [mask_value]
             elif self.data_masking == "current+old":
-                tmp_labels = self.labels+self.labels_old+[mask_value]
+                tmp_labels = self.labels + self.labels_old + [mask_value]
             else:
                 raise ValueError(f"masking type:{self.masking} not supported")
             mask = np.isin(image_array, tmp_labels)
@@ -196,13 +253,13 @@ class BaseIncrement(Dataset):
         else:
             mask = np.isin(image_array, self.order)
             image_array[~mask] = mask_value
-        return image_array
+        return Image.fromarray(image_array)
 
     def __getitem__(self, index):
         if self.update_flag:
             self.update_flag = False
             self.index = index
-            return self.dataset[index -self.index]
+            return self.dataset[index - self.index]
         if not self.update_flag:
             return self.dataset[index]
 
@@ -228,22 +285,21 @@ class BaseIncrement(Dataset):
         self.update_flag = True
 
 
-
 class BaseEvaluate(BaseIncrement):
-    def __init__(self,no_stage_value = 224,**kwargs):
+    def __init__(self, no_stage_value=224, **kwargs):
         self.no_stage_value = no_stage_value
         super().__init__(**kwargs)
 
     @override
-    def _create_target_transform(self,img):
+    def _create_target_transform(self, img):
 
         mask_value = self.mask_value
         image_array = np.array(img)
         if self.masking:
             if self.data_masking == "current":
-                tmp_labels = self.labels+[mask_value]
+                tmp_labels = self.labels + [mask_value]
             elif self.data_masking == "current+old":
-                tmp_labels = self.labels+self.labels_old+[mask_value]
+                tmp_labels = self.labels + self.labels_old + [mask_value]
             else:
                 raise ValueError(f"masking type:{self.masking} not supported")
             mask = np.isin(image_array, tmp_labels)

@@ -43,6 +43,18 @@ from utils import get_dataset_config, auto_init
 #     print(i["scene"])
 #
 #
-test_list = [13,5]
-print(str(test_list))
+# test_list = [13,5]
+# print(str(test_list))
+from torch.utils.data import DataLoader
+from utils.create_dataset import load_dataset_from_config
+from utils import get_dataset_config
+from dataset.dataloader import Dataloader
 
+config = get_dataset_config("VOC")
+print(config)
+dataset = load_dataset_from_config(config,1,None)
+dataloader = Dataloader(dataset,batch_size=3)
+
+for i in dataloader:
+    print(i)
+    break

@@ -1,0 +1,14 @@
+pretrain_img_size: 384
+embed_dim: 128
+depths: [ 2, 2, 18, 2 ]
+num_heads: [ 4,8,16,32 ]
+window_size: 12
+mlp_ratio: 4.0
+qkv_bias: true
+drop_rate: 0.0
+attn_drop_rate: 0.0
+drop_path_rate: 0.2
+ape: false
+dilation: false
+use_checkpoint: true
+out_indices: [ 1,2,3 ]

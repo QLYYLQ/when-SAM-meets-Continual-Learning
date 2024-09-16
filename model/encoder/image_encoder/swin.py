@@ -6,8 +6,7 @@ import torch.utils.checkpoint as checkpoint
 from model.utils.trunc_normal_ import trunc_normal_
 from model.utils.droppath import DropPath
 from model.encoder.image_encoder.common import MLPBlock,window_partition,window_reverse
-from timm.models.layers import to_2tuple
-from torch import Tensor
+from model.utils.ImageList import ImageList,from_tensors
 
 
 
@@ -51,7 +50,7 @@ class WindowAttention(nn.Module):
         # get pair-wise relative position index for each token inside the window
         coords_h = torch.arange(self.window_size[0])
         coords_w = torch.arange(self.window_size[1])
-        coords = torch.stack(torch.meshgrid([coords_h, coords_w]))  # 2, Wh, Ww
+        coords = torch.stack(torch.meshgrid([coords_h, coords_w],indexing="ij"))  # 2, Wh, Ww
         coords_flatten = torch.flatten(coords, 1)  # 2, Wh*Ww
         relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # 2, Wh*Ww, Wh*Ww
         relative_coords = relative_coords.permute(1, 2, 0).contiguous()  # Wh*Ww, Wh*Ww, 2
@@ -125,7 +124,6 @@ class SwinTransformerBlock(nn.Module):
         drop (float, optional): Dropout rate. Default: 0.0
         attn_drop (float, optional): Attention dropout rate. Default: 0.0
         drop_path (float, optional): Stochastic depth rate. Default: 0.0
-        act_layer (nn.Module, optional): Activation layer. Default: nn.GELU
         norm_layer (nn.Module, optional): Normalization layer.  Default: nn.LayerNorm
     """
 
@@ -154,7 +152,7 @@ class SwinTransformerBlock(nn.Module):
         self.norm1 = norm_layer(dim)
         self.attn = WindowAttention(
             dim,
-            window_size=to_2tuple(self.window_size),
+            window_size=(self.window_size,self.window_size),
             num_heads=num_heads,
             qkv_bias=qkv_bias,
             qk_scale=qk_scale,
@@ -404,7 +402,7 @@ class PatchEmbed(nn.Module):
 
     def __init__(self, patch_size=4, in_chans=3, embed_dim=96, norm_layer=None):
         super().__init__()
-        patch_size = to_2tuple(patch_size)
+        patch_size = (patch_size,patch_size)
         self.patch_size = patch_size
 
         self.in_chans = in_chans
@@ -481,7 +479,7 @@ class SwinTransformer(nn.Module):
         drop_path_rate=0.2,
         norm_layer=nn.LayerNorm,
         patch_norm=True,
-        out_indices=(0, 1, 2, 3),
+        out_indices=(1, 2, 3),
         frozen_stages=-1,
         dilation=False,
         use_checkpoint=False,
@@ -532,11 +530,11 @@ class SwinTransformer(nn.Module):
         # build layers
         self.layers = nn.ModuleList()
         # prepare downsample list
-        downsamplelist = [PatchMerging for i in range(self.num_layers)]
-        downsamplelist[-1] = None
+        downsample_list = [PatchMerging for i in range(self.num_layers)]
+        downsample_list[-1] = None
         num_features = [int(embed_dim * 2**i) for i in range(self.num_layers)]
         if self.dilation:
-            downsamplelist[-2] = None
+            downsample_list[-2] = None
             num_features[-1] = int(embed_dim * 2 ** (self.num_layers - 1)) // 2
         for i_layer in range(self.num_layers):
             layer = BasicLayer(
@@ -553,7 +551,7 @@ class SwinTransformer(nn.Module):
                 drop_path=dpr[sum(depths[:i_layer]) : sum(depths[: i_layer + 1])],
                 norm_layer=norm_layer,
                 # downsample=PatchMerging if (i_layer < self.num_layers - 1) else None,
-                downsample=downsamplelist[i_layer],
+                downsample=downsample_list[i_layer],
                 use_checkpoint=use_checkpoint,
             )
             self.layers.append(layer)
@@ -611,53 +609,47 @@ class SwinTransformer(nn.Module):
     #     else:
     #         raise TypeError('pretrained must be a str or None')
 
-    def forward_raw(self, x):
+    # def forward_raw(self, x):
+    #     """Forward function."""
+    #     x = self.patch_embed(x)
+    #
+    #     Wh, Ww = x.size(2), x.size(3)
+    #     if self.ape:
+    #         # interpolate the position embedding to the corresponding size
+    #         absolute_pos_embed = F.interpolate(
+    #             self.absolute_pos_embed, size=(Wh, Ww), mode="bicubic"
+    #         )
+    #         x = (x + absolute_pos_embed).flatten(2).transpose(1, 2)  # B Wh*Ww C
+    #     else:
+    #         x = x.flatten(2).transpose(1, 2)
+    #     x = self.pos_drop(x)
+    #
+    #     outs = []
+    #     for i in range(self.num_layers):
+    #         layer = self.layers[i]
+    #         x_out, H, W, x, Wh, Ww = layer(x, Wh, Ww)
+    #         # import ipdb; ipdb.set_trace()
+    #
+    #         if i in self.out_indices:
+    #             norm_layer = getattr(self, f"norm{i}")
+    #             x_out = norm_layer(x_out)
+    #
+    #             out = x_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
+    #             outs.append(out)
+    #     # in:
+    #     #   torch.Size([2, 3, 1024, 1024])
+    #     # outs:
+    #     #   [torch.Size([2, 192, 256, 256]), torch.Size([2, 384, 128, 128]), \
+    #     #       torch.Size([2, 768, 64, 64]), torch.Size([2, 1536, 32, 32])]
+    #     return tuple(outs)
+
+    def forward(self, image_batch: ImageList):
         """Forward function."""
+        x = image_batch.tensor
         x = self.patch_embed(x)
 
         Wh, Ww = x.size(2), x.size(3)
-        if self.ape:
-            # interpolate the position embedding to the corresponding size
-            absolute_pos_embed = F.interpolate(
-                self.absolute_pos_embed, size=(Wh, Ww), mode="bicubic"
-            )
-            x = (x + absolute_pos_embed).flatten(2).transpose(1, 2)  # B Wh*Ww C
-        else:
-            x = x.flatten(2).transpose(1, 2)
-        x = self.pos_drop(x)
-
-        outs = []
-        for i in range(self.num_layers):
-            layer = self.layers[i]
-            x_out, H, W, x, Wh, Ww = layer(x, Wh, Ww)
-            # import ipdb; ipdb.set_trace()
-
-            if i in self.out_indices:
-                norm_layer = getattr(self, f"norm{i}")
-                x_out = norm_layer(x_out)
-
-                out = x_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
-                outs.append(out)
-        # in:
-        #   torch.Size([2, 3, 1024, 1024])
-        # outs:
-        #   [torch.Size([2, 192, 256, 256]), torch.Size([2, 384, 128, 128]), \
-        #       torch.Size([2, 768, 64, 64]), torch.Size([2, 1536, 32, 32])]
-        return tuple(outs)
-
-    def forward(self, x: Tensor):
-        """Forward function."""
-        x = self.patch_embed(x)
-
-        Wh, Ww = x.size(2), x.size(3)
-        if self.ape:
-            # interpolate the position embedding to the corresponding size
-            absolute_pos_embed = F.interpolate(
-                self.absolute_pos_embed, size=(Wh, Ww), mode="bicubic"
-            )
-            x = (x + absolute_pos_embed).flatten(2).transpose(1, 2)  # B Wh*Ww C
-        else:
-            x = x.flatten(2).transpose(1, 2)
+        x = x.flatten(2).transpose(1, 2)
         x = self.pos_drop(x)
 
         outs = []
@@ -680,10 +672,13 @@ class SwinTransformer(nn.Module):
         # collect for nesttensors
         outs_dict = {}
         for idx, out_i in enumerate(outs):
-            m = tensor_list.mask
-            assert m is not None
-            mask = F.interpolate(m[None].float(), size=out_i.shape[-2:]).to(torch.bool)[0]
-            outs_dict[idx] = NestedTensor(out_i, mask)
+            masks = image_batch.mask
+            assert masks is not None
+
+            mask = F.interpolate(masks.float(), size=out_i.shape[-2:]).to(torch.bool)
+
+
+            outs_dict[idx] = ImageList(tensor = out_i, mask = mask)
 
         return outs_dict
 
@@ -691,3 +686,21 @@ class SwinTransformer(nn.Module):
         """Convert the model into training mode while keep layers freezed."""
         super(SwinTransformer, self).train(mode)
         self._freeze_stages()
+
+
+def build_swin(model_name,**kwargs):
+    model_para_dict = {"swin_L_384": dict(
+            embed_dim=192, depths=[2, 2, 18, 2], num_heads=[6, 12, 24, 48], window_size=12,pretrain_img_size=384
+        ),}
+    para_dict = model_para_dict[model_name]
+    para_dict.update(kwargs)
+    model = SwinTransformer(**para_dict)
+    return model
+
+if __name__ == "__main__":
+    swin = build_swin("swin_L_384")
+    tensor = torch.ones([2,3,384,384])
+    mask = torch.ones([2,1,384,384],dtype=torch.bool)
+    image_list = ImageList(tensor,mask)
+    out = swin(image_list)
+    print(out)
