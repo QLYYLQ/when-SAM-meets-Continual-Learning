@@ -111,7 +111,7 @@ class BaseSplit(Dataset):
         def process_image(image: Image, new_image_size: Tuple[int, int] = new_image_size) -> ImageList:
             new_image = self.resize_image_aspect_ratio(image)
             new_image = torch.tensor(np.array(new_image))
-            if len(new_image.shape)!= 3:
+            if len(new_image.shape) != 3:
                 new_image = new_image.unsqueeze(-1)
             new_image = new_image.permute(2, 0, 1)
 

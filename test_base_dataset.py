@@ -56,7 +56,8 @@ dataset = load_dataset_from_config(config,1,None)
 dataloader = Dataloader(dataset,batch_size=15)
 i=0
 for img,label,text in dataloader:
+    print([s.tensor.shape for s in img])
     i+=1
-    print(text)
+    # print(text)
     if i >= 90:
         dataset.update_stage(1)
