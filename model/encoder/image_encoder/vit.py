@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from typing import Type, Optional, Tuple,Any,List
 from functools import partial
 from model.encoder.image_encoder.common import MLPBlock,window_partition,window_reverse
-from model.common import LayerNorm2d
+from model.utils.common import LayerNorm2d
 
 
 class Block(nn.Module):

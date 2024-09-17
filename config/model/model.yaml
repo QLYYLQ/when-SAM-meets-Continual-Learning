@@ -1,12 +1,18 @@
 image_encoder:
-  "swin_B"
+  name:
+    "Swin_384_B"
 position_embedding:
-  "sinHW"
+  name:
+    "sinHW"
 text_encoder:
-  "CLIP"
+  name:
+    "CLIP"
 adapter:
-  "none"
+  name:
+    "none"
 query_net:
-  "none"
+  name:
+    "none"
 mask_decoder:
-  "hq-decoder"
+  name:
+    "none"

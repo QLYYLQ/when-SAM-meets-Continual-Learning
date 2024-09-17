@@ -1,4 +1,5 @@
-from numpy import array,unique
+from numpy import array, unique
+
 
 def filter_images(dataset, labels, labels_old, overlap=True):
     """

@@ -3,7 +3,7 @@ from torch import nn
 
 from typing import List, Tuple, Type
 
-from model.common import LayerNorm2d
+from model.utils.common import LayerNorm2d
 from model.decoder.common import MLP
 
 

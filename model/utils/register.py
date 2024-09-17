@@ -1,4 +1,3 @@
-from .encoder import image_encoder_module_entrypoints
 
 _model_entrypoints = {}
 
@@ -10,4 +9,6 @@ def register_model(fn):
     return fn
 
 
+def model_entrypoint(dataset_name):
+    return _model_entrypoints[dataset_name]
 

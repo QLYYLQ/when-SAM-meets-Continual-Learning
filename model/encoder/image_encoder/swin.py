@@ -6,8 +6,8 @@ import torch.utils.checkpoint as checkpoint
 from model.utils.trunc_normal_ import trunc_normal_
 from model.utils.droppath import DropPath
 from model.encoder.image_encoder.common import MLPBlock,window_partition,window_reverse
-from model.utils.ImageList import ImageList,from_tensors
-
+from model.utils.ImageList import ImageList
+from model.utils.register import register_model
 
 
 
@@ -687,11 +687,25 @@ class SwinTransformer(nn.Module):
         super(SwinTransformer, self).train(mode)
         self._freeze_stages()
 
-
+@register_model
 def build_swin(model_name,**kwargs):
-    model_para_dict = {"swin_L_384": dict(
-            embed_dim=192, depths=[2, 2, 18, 2], num_heads=[6, 12, 24, 48], window_size=12,pretrain_img_size=384
-        ),}
+    model_para_dict = {
+        "swin_T_224_1k": dict(
+            embed_dim=96, depths=[2, 2, 6, 2], num_heads=[3, 6, 12, 24], window_size=7
+        ),
+        "swin_B_224_22k": dict(
+            embed_dim=128, depths=[2, 2, 18, 2], num_heads=[4, 8, 16, 32], window_size=7
+        ),
+        "swin_B_384_22k": dict(
+            embed_dim=128, depths=[2, 2, 18, 2], num_heads=[4, 8, 16, 32], window_size=12
+        ),
+        "swin_L_224_22k": dict(
+            embed_dim=192, depths=[2, 2, 18, 2], num_heads=[6, 12, 24, 48], window_size=7
+        ),
+        "swin_L_384_22k": dict(
+            embed_dim=192, depths=[2, 2, 18, 2], num_heads=[6, 12, 24, 48], window_size=12
+        ),
+    }
     para_dict = model_para_dict[model_name]
     para_dict.update(kwargs)
     model = SwinTransformer(**para_dict)

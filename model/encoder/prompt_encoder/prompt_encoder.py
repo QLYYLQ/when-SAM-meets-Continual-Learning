@@ -2,10 +2,10 @@ import numpy as np
 import torch
 from torch import nn
 from typing import Any, Optional, Tuple, Type
-from model.common import LayerNorm2d
-from model.encoder.register import register_module
+from model.utils.common import LayerNorm2d
+from model.utils.register import register_model
 
-@register_module
+@register_model
 class PromptEncoder(nn.Module):
     def __init__(
         self,

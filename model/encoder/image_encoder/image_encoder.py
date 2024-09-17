@@ -2,13 +2,11 @@ import torch
 import torch.nn as nn
 from functools import partial
 from typing import Type, Optional, Tuple, Any, List
-from model.encoder.register import register_module
 from model.encoder.image_encoder.vit import PatchEmbed, Block
-from model.encoder.image_encoder.swin import SwinTransformer
-from model.common import LayerNorm2d
+from model.utils.common import LayerNorm2d
 
 
-@register_module
+
 class ViT(nn.Module):
     def __init__(
             self,
