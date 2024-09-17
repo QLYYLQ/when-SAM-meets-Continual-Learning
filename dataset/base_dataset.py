@@ -76,8 +76,9 @@ class BaseSplit(Dataset):
 
     def resize_image_aspect_ratio(self,img:Image)->Image:
         # 原始图片尺寸
+        # wd
         min_size = (self.image_size[0], self.image_size[0])
-        max_size = (self.image_size[1], self.image_size[1])
+        max_size = (self.image_size[1], self.image_size[0])
         original_width, original_height = img.size
 
         # 计算纵横比
@@ -85,17 +86,19 @@ class BaseSplit(Dataset):
 
         # 根据纵横比重新计算新的目标尺寸
         if aspect_ratio >= 1:  # 宽图片
-            new_width = min(max_size[0], max(min_size[0], original_width))
+            new_width = max_size[0]
             new_height = int(new_width / aspect_ratio)
             if new_height > max_size[1]:  # 如果计算的高度超出范围，则需要按照高度来重新计算
                 new_height = max_size[1]
                 new_width = int(new_height * aspect_ratio)
+                if new_width > max_size[0]: new_width = max_size[0]
         else:  # 高图片
-            new_height = min(max_size[1], max(min_size[1], original_height))
+            new_height = max_size[1]
             new_width = int(new_height * aspect_ratio)
-            if new_width > max_size[0]:  # 如果计算的宽度超出范围，则需要按照宽度来重新计算
-                new_width = max_size[0]
-                new_height = int(new_width / aspect_ratio)
+            # if new_width > max_size[0]:  # 如果计算的宽度超出范围，则需要按照宽度来重新计算
+            #     new_width = max_size[0]
+            #     new_height = int(new_width / aspect_ratio)
+            #     if new_height > max_size[1]: new_height = max_size[1]
 
         # resize 图片并保持原始纵横比
         resized_img = img.resize((new_width, new_height), Image.BILINEAR)
@@ -227,6 +230,7 @@ class BaseIncrement(Dataset):
         self.dataset.target_transform = self._create_target_transform
         self.index = 0
         self.update_flag = False
+        self.class_name = [v for k,v in self.dataset.classes.items() if k in self.labels]
 
     def __strip_ignore(self, labels):
         for i in self.ignore_index:
@@ -256,12 +260,22 @@ class BaseIncrement(Dataset):
         return Image.fromarray(image_array)
 
     def __getitem__(self, index):
+        if index >= len(self.dataset.images):
+            index = index % len(self.dataset.images)
+            shuffle(self.dataset.images)
         if self.update_flag:
             self.update_flag = False
             self.index = index
-            return self.dataset[index - self.index]
-        if not self.update_flag:
-            return self.dataset[index]
+            data = self.dataset[index - self.index]
+            text = data["text_prompt"].split(".")
+            text_prompt = [i for i in text if i in self.class_name]
+            data["text_prompt"] = text_prompt
+        else:
+            data = self.dataset[index]
+            text = data["text_prompt"].split(".")
+            text_prompt = [i for i in text if i in self.class_name]
+            data["text_prompt"] = text_prompt
+        return data
 
     def __len__(self):
         return len(self.dataset)
@@ -282,6 +296,7 @@ class BaseIncrement(Dataset):
         self.labels_old = labels_old
         self.dataset.apply_new_data_list(self.stage_path_dict[stage_number])
         shuffle(self.dataset.images)
+        self.class_name = [v for k, v in self.dataset.classes.items() if k in self.labels]
         self.update_flag = True
 
 

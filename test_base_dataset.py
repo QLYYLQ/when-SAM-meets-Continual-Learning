@@ -53,8 +53,10 @@ from dataset.dataloader import Dataloader
 config = get_dataset_config("VOC")
 print(config)
 dataset = load_dataset_from_config(config,1,None)
-dataloader = Dataloader(dataset,batch_size=3)
-
-for i in dataloader:
-    print(i)
-    break
+dataloader = Dataloader(dataset,batch_size=15)
+i=0
+for img,label,text in dataloader:
+    i+=1
+    print(text)
+    if i >= 90:
+        dataset.update_stage(1)

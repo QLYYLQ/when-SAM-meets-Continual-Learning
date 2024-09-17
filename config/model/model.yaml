@@ -1,0 +1,12 @@
+image_encoder:
+  "swin_B"
+position_embedding:
+  "sinHW"
+text_encoder:
+  "CLIP"
+adapter:
+  "none"
+query_net:
+  "none"
+mask_decoder:
+  "hq-decoder"
