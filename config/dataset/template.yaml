@@ -1,0 +1,60 @@
+name:
+  "template"
+#shows how to write a dataset yaml
+class_number:
+  20
+#a number about the class number in dataset
+training:
+  #you and add your task as task_3 and so on
+  task_1:
+    training_type:
+      "disjoint or overlapped"
+    design:
+      "18-2"
+    # writing as: number a-number b that shows your task design
+    index_order:
+      "random"
+    #a string about the index order you design to learn like: *-12-1. the example shows that the task has three stages
+    #      that only learn one more class in stage 2 and 3 and the index is 12 and 1.
+    #      default for select index in order
+    #      random for select index random
+    ignore_index:
+      [0]
+evaluate:
+  task_1:
+    type:
+      ["all","only stage"]
+    #"a list with: all or only stage"
+dataset_setting:
+  root:
+    "PascalVOC12"
+  classes:
+    "default"
+  #a file stored the index and class name for dataset. default is in classes/dataset_name_classes.pkl
+  need_index_name:
+    True
+  #a list about the index to ignore
+increment_setting:
+  increment_dataset_name:
+    "default"
+  # default is name.Increment
+  split_dataset_name:
+    "default"
+  #default is name.split
+  split_config:
+    "default"
+  # default is using dataset_config, you can also write your own config in this to satisfy your own split_dataset
+  overlap:
+    True
+  masking:
+    True
+  data_masking:
+    "current"
+  # current or current+old or all
+  no_memory:
+    True
+  save_stage_image_path:
+    "None"
+
+
+

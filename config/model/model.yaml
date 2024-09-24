@@ -1,0 +1,18 @@
+image_encoder:
+  name:
+    "Swin_384_B"
+position_embedding:
+  name:
+    "sinHW"
+text_encoder:
+  name:
+    "CLIP"
+adapter:
+  name:
+    "none"
+query_net:
+  name:
+    "none"
+mask_decoder:
+  name:
+    "none"

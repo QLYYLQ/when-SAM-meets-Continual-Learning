@@ -1,0 +1,8 @@
+N_steps:
+  128
+temperatureH:
+  20
+temperatureW:
+  20
+normalize:
+  True

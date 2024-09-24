@@ -1,0 +1,1 @@
+from .register import prompt_encoder_module_entrypoints

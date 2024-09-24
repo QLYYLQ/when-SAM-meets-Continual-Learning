@@ -1,0 +1,22 @@
+name:
+  "bdd10k"
+training:
+  #you and add your task as task_3 and so on
+  task_1:
+    training_type:
+      "overlapped"
+    design:
+      "16-2"
+    index_order:
+      "none"
+evaluate:
+  task_1:
+    type:
+      ["only stage","all"]
+dataset_setting:
+  root:
+    "path/to/dataset"
+  class_number:
+    "18"
+  classes:
+    "default"

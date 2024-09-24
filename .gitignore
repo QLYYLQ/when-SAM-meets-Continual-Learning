@@ -1,0 +1,41 @@
+# 忽略所有缓存文件
+*.cache
+*.log
+*.tmp
+
+# 忽略常见的缓存目录
+/cache/
+/tmp/
+
+# 忽略 test 文件夹
+/test/
+/data/*.zip
+/data/*.tar.gz
+/data/ADEChallengeData2016
+/data/PascalVOC12
+/tes_pic/
+/checkpoints/
+/config/saved_task_txt/ADE/
+/config/saved_task_txt/VOC/
+# 忽略特定的编程语言和框架的缓存文件
+# Python
+__pycache__/
+*.pyc
+
+# Node.js
+node_modules/
+
+# Java
+*.class
+target/
+
+# IDE 相关
+.vscode/
+.idea/
+*.swp
+
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db
+/sam-hq/
+*.pth

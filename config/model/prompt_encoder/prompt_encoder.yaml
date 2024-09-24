@@ -1,0 +1,8 @@
+embed_dim: 
+  256
+image_embedding_size: 
+  (64,64)
+input_image_size: 
+  (1024,1024)
+mask_in_chans: 
+  16
