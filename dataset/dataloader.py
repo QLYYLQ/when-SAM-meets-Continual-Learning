@@ -1,12 +1,10 @@
 import torch
 from torch.utils.data import DataLoader as PytorchDataLoader
-from typing import Optional
-from dataset import BaseIncrement
 from utils.ImageList import ImageList
 
 
 class Dataloader(PytorchDataLoader):
-    def __init__(self, dataset: Optional[BaseIncrement] = None, batch_size=1):
+    def __init__(self, dataset, batch_size=1):
         collate_fn = self.collate_fn
         super(Dataloader, self).__init__(dataset, batch_size, collate_fn=collate_fn)
 

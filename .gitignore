@@ -39,3 +39,5 @@ target/
 Thumbs.db
 /sam-hq/
 *.pth
+*.png
+*.jpg

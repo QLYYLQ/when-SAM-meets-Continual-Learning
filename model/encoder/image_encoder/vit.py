@@ -343,7 +343,7 @@ class ViT(nn.Module):
 
 
 def build_vit(model_name, **kwargs):
-    model_dict = dict(vit_b=dict(embed_dim=768, depth=12, num_heads=12, global_attn_indexes=[2, 5, 8, 11], ))
+    model_dict = dict(vit_b=dict(embed_dim=768, depth=12, num_heads=12, global_attn_indexes=[2, 5, 8, 11], ),vit_l=dict(embed_dim=1024, depth=24, num_heads=16, global_attn_indexes=[5, 11, 17, 23],),vit_h=dict(embed_dim=1280, depth=32, num_heads=16, global_attn_indexes=[7, 15, 23, 31],))
     para_dict = model_dict[model_name]
     para_dict.update(kwargs)
     return ViT(**para_dict)

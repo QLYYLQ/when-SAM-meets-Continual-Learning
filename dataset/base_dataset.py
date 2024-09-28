@@ -7,7 +7,7 @@ from dataset.register import dataset_entrypoints
 from torch.utils.data import Dataset
 from random import shuffle
 from utils.ImageList import ImageList
-
+from torchvision.transforms import ToTensor
 
 # 这里存放的是dataset的模板，继承这个模板实现相应的功能就可以了
 
@@ -95,7 +95,8 @@ class BaseSplit(Dataset):
             if new_height > max_size[1]:  # 如果计算的高度超出范围，则需要按照高度来重新计算
                 new_height = max_size[1]
                 new_width = int(new_height * aspect_ratio)
-                if new_width > max_size[0]: new_width = max_size[0]
+                if new_width > max_size[0]:
+                    new_width = max_size[0]
         else:  # 高图片
             new_height = max_size[1]
             new_width = int(new_height * aspect_ratio)
@@ -130,20 +131,21 @@ class BaseSplit(Dataset):
                 new_image = self.resize_image_aspect_ratio(image, False)
             else:
                 new_image = self.resize_image_aspect_ratio(image, True)
-            new_image = torch.tensor(np.array(new_image))
-            if len(new_image.shape) != 3:
+            if new_image.mode not in ["RGB","GBR"]:
+                new_image = torch.tensor(np.array(new_image))
                 new_image = new_image.unsqueeze(-1)
                 new_image = new_image.permute(2, 0, 1)
                 image_size = new_image.shape[-2:]
                 color_image_size = (1, *new_image_size)
                 is_target_image = True
             else:
-                new_image = new_image.permute(2, 0, 1)
+                new_image = ToTensor()(new_image)
+                # new_image = new_image.permute(2, 0, 1)
                 image_size = new_image.shape[-2:]
                 color_image_size = (3, *new_image_size)
             resize_image = torch.zeros(color_image_size, dtype=torch.float)
             if not is_target_image:
-                resize_image[:, :image_size[0], :image_size[1]] = (new_image - mean) / std
+                resize_image[:, :image_size[0], :image_size[1]] = new_image
             else:
                 resize_image[:, :image_size[0], :image_size[1]] = new_image
             mask = torch.ones(new_image_size, dtype=torch.bool)
@@ -247,6 +249,7 @@ class BaseIncrement(Dataset):
         self.labels = []
         self.labels_old = []
         self.stage = 0
+        self.max_stage = len(self.stage_index_dict.keys())
         self.update_stage(0)
 
         self.__strip_ignore(self.labels)
@@ -264,14 +267,14 @@ class BaseIncrement(Dataset):
         self.dataset.target_transform = self._create_target_transform
         self.index = 0
         self.update_flag = False
-        self.class_name = [v for k, v in self.dataset.classes.items() if k in self.labels]
+        self.stage_class = {k: v for k, v in self.dataset.classes.items() if k in self.labels}
 
     def __strip_ignore(self, labels):
         for i in self.ignore_index:
             while i in labels:
                 labels.remove(i)
 
-    def _create_inverted_order(self, mask_value=255):
+    def _create_inverted_order(self):
         # 映射label和索引
         self.inverted_order = {label: self.order.index(label) for label in self.order if label not in self.ignore_index}
 
@@ -317,9 +320,8 @@ class BaseIncrement(Dataset):
         return len(self.dataset)
 
     def update_stage(self, stage_number):
-        max_stage = len(self.stage_index_dict.keys())
         labels_old = []
-        if stage_number >= max_stage:
+        if stage_number >= self.max_stage:
             raise ValueError("stage number out of range")
         if stage_number == 0:
             labels_old = []
@@ -341,4 +343,3 @@ class BaseEvaluate(BaseIncrement):
         if "split_config" in kwargs.keys():
             kwargs["split_config"]["train"] = False
         super().__init__(**kwargs)
-

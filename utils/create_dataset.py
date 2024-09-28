@@ -1,7 +1,8 @@
 from pathlib import Path
 import os
 from utils import auto_init, get_dataset_config
-from dataset import dataset_entrypoints, is_dataset_registered, filter_images, save_list_from_filter
+from dataset.register import (dataset_entrypoints, is_dataset_registered)
+from dataset.utils.filter_images import filter_images, save_list_from_filter
 
 config_path = Path(__file__).resolve().parent.parent.joinpath('config')
 

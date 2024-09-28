@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from model.SAM import Sam
-
+from utils.ImageList import ImageList
 from typing import Optional, Tuple
 
 # from .utils.transforms import ResizeLongestSide
@@ -28,7 +28,6 @@ class SamPredictor:
         """
         super().__init__()
         self.model = sam_model
-        # self.transform = ResizeLongestSide(sam_model.image_encoder.img_size)
         self.reset_image()
 
     def set_image(
@@ -50,46 +49,10 @@ class SamPredictor:
             "BGR",
         ], f"image_format must be in ['RGB', 'BGR'], is {image_format}."
         # import pdb;pdb.set_trace()
-        if image_format != self.model.image_format:
-            image = image[..., ::-1]
 
-        # Transform the image to the form expected by the model
-        # import pdb;pdb.set_trace()
-        input_image = self.transform.apply_image(image)
-        input_image_torch = torch.as_tensor(input_image, device=self.device)
-        input_image_torch = input_image_torch.permute(2, 0, 1).contiguous()[None, :, :, :]
 
-        self.set_torch_image(input_image_torch, image.shape[:2])
 
-    @torch.no_grad()
-    def set_torch_image(
-        self,
-        transformed_image: torch.Tensor,
-        original_image_size: Tuple[int, ...],
-    ) -> None:
-        """
-        Calculates the image embeddings for the provided image, allowing
-        masks to be predicted with the 'predict' method. Expects the input
-        image to be already transformed to the format expected by the model.
 
-        Arguments:
-          transformed_image (torch.Tensor): The input image, with shape
-            1x3xHxW, which has been transformed with ResizeLongestSide.
-          original_image_size (tuple(int, int)): The size of the image
-            before transformation, in (H, W) format.
-        """
-        assert (
-            len(transformed_image.shape) == 4
-            and transformed_image.shape[1] == 3
-            and max(*transformed_image.shape[2:]) == self.model.image_encoder.img_size
-        ), f"set_torch_image input must be BCHW with long side {self.model.image_encoder.img_size}."
-        self.reset_image()
-
-        self.original_size = original_image_size
-        self.input_size = tuple(transformed_image.shape[-2:])
-        input_image = self.model.preprocess(transformed_image)
-        self.features, self.interm_features = self.model.image_encoder(input_image)
-        self.is_image_set = True
 
     def predict(
         self,
@@ -142,7 +105,7 @@ class SamPredictor:
             assert (
                 point_labels is not None
             ), "point_labels must be supplied if point_coords is supplied."
-            # point_coords = self.transform.apply_coords(point_coords, self.original_size)
+            point_coords = self.transform.apply_coords(point_coords, self.original_size)
             coords_torch = torch.as_tensor(point_coords, dtype=torch.float, device=self.device)
             labels_torch = torch.as_tensor(point_labels, dtype=torch.int, device=self.device)
             coords_torch, labels_torch = coords_torch[None, :, :], labels_torch[None, :]
